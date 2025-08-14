@@ -5,7 +5,6 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-
 import 'dart:async'; // Import for TimeoutException
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // Import the markdown package
@@ -30,7 +29,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Noira AI Chat Bot',
       theme: ThemeData(
-        primaryColor: const Color(0xFF36013F), // Deep purple for a professional feel
+        primaryColor:
+            const Color(0xFF36013F), // Deep purple for a professional feel
         scaffoldBackgroundColor: Colors.white,
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.white,
@@ -41,8 +41,8 @@ class MyApp extends StatelessWidget {
           bodyLarge: TextStyle(color: Colors.black87),
           bodyMedium: TextStyle(color: Colors.black87),
         ),
-        colorScheme:
-            ColorScheme.fromSwatch().copyWith(secondary: const Color(0xFFFF1493)),
+        colorScheme: ColorScheme.fromSwatch()
+            .copyWith(secondary: const Color(0xFFFF1493)),
         // FIX: Set the default font for the entire app to support Hindi/Marathi characters
         fontFamily: 'NotoSansDevanagari',
       ),
@@ -80,7 +80,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   bool isTtsPlaying = false;
   bool _stopRequested = false;
 
-  final String _serverUrl = 'http://localhost:5000/chat';
+  final String _serverUrl = 'http://localhost:8000/chat';
 
   @override
   void initState() {
@@ -115,9 +115,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         filteredChats = List.from(previousChats);
       } else {
         filteredChats = previousChats.where((chat) {
-          return chat.any((message) => 
-            message.text.toLowerCase().contains(query)
-          );
+          return chat
+              .any((message) => message.text.toLowerCase().contains(query));
         }).toList();
       }
     });
@@ -125,9 +124,11 @@ class _ChatBotScreenState extends State<ChatBotScreen>
 
   String _getSearchHighlightedTitle(List<ChatMessage> chat, String query) {
     if (query.isEmpty) {
-      return chat.isNotEmpty ? (chat.first.isUser ? chat.first.text : 'Chat') : 'Chat';
+      return chat.isNotEmpty
+          ? (chat.first.isUser ? chat.first.text : 'Chat')
+          : 'Chat';
     }
-    
+
     // Find the first message that contains the search query
     for (ChatMessage message in chat) {
       if (message.text.toLowerCase().contains(query.toLowerCase())) {
@@ -138,8 +139,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         return text;
       }
     }
-    
-    return chat.isNotEmpty ? (chat.first.isUser ? chat.first.text : 'Chat') : 'Chat';
+
+    return chat.isNotEmpty
+        ? (chat.first.isUser ? chat.first.text : 'Chat')
+        : 'Chat';
   }
 
   Future<void> _sendMessage(String text) async {
@@ -157,11 +160,13 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     final startTime = DateTime.now();
 
     try {
-      final response = await http.post(
-        Uri.parse(_serverUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'message': text}),
-      ).timeout(const Duration(seconds: 20));
+      final response = await http
+          .post(
+            Uri.parse(_serverUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'message': text}),
+          )
+          .timeout(const Duration(seconds: 20));
 
       final elapsed = DateTime.now().difference(startTime);
       const minTypingDuration = Duration(milliseconds: 800);
@@ -186,7 +191,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       } else {
         setState(() {
           messages.add(ChatMessage(
-            text: 'Server Error ${response.statusCode}: Could not get a valid response. Please check the server logs.',
+            text:
+                'Server Error ${response.statusCode}: Could not get a valid response. Please check the server logs.',
             isUser: false,
           ));
           isTyping = false;
@@ -197,12 +203,14 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         setState(() => isTyping = false);
         return;
       }
-      
+
       String errorMessage;
       if (e is TimeoutException) {
-        errorMessage = "Connection Timed Out.\n\nIs the Python server running and responsive?";
+        errorMessage =
+            "Connection Timed Out.\n\nIs the Python server running and responsive?";
       } else {
-        errorMessage = "Connection Failed.\n\n- Is the Python server running on your computer?\n- Is a firewall blocking the connection to port 5000?";
+        errorMessage =
+            "Connection Failed.\n\n- Is the Python server running on your computer?\n- Is a firewall blocking the connection to port 5000?";
       }
 
       setState(() {
@@ -238,7 +246,9 @@ class _ChatBotScreenState extends State<ChatBotScreen>
 
   Future<void> _saveAllChats() async {
     final prefs = await SharedPreferences.getInstance();
-    final allChatsJson = jsonEncode(previousChats.map((chat) => chat.map((m) => m.toJson()).toList()).toList());
+    final allChatsJson = jsonEncode(previousChats
+        .map((chat) => chat.map((m) => m.toJson()).toList())
+        .toList());
     await prefs.setString('all_chats', allChatsJson);
   }
 
@@ -259,7 +269,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     if (allChatsJson != null) {
       final List<dynamic> decoded = jsonDecode(allChatsJson);
       setState(() {
-        previousChats = decoded.map<List<ChatMessage>>((chat) => (chat as List).map((e) => ChatMessage.fromJson(e)).toList()).toList();
+        previousChats = decoded
+            .map<List<ChatMessage>>((chat) =>
+                (chat as List).map((e) => ChatMessage.fromJson(e)).toList())
+            .toList();
         filteredChats = List.from(previousChats); // Initialize filtered chats
       });
     }
@@ -362,8 +375,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 width: 160,
                 height: 160,
                 fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) =>
-                    Icon(Icons.support_agent, size: 100, color: Theme.of(context).primaryColor),
+                errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.support_agent,
+                    size: 100,
+                    color: Theme.of(context).primaryColor),
               ),
               const SizedBox(height: 24),
               const Text(
@@ -393,9 +408,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 runSpacing: 12,
                 alignment: WrapAlignment.center,
                 children: [
-                  _buildSuggestionButton(Icons.security, 'Tips for personal safety'),
-                  _buildSuggestionButton(Icons.support_agent, 'I need someone to talk to'),
-                  _buildSuggestionButton(Icons.location_on, 'Find local support resources'),
+                  _buildSuggestionButton(
+                      Icons.security, 'Tips for personal safety'),
+                  _buildSuggestionButton(
+                      Icons.support_agent, 'I need someone to talk to'),
+                  _buildSuggestionButton(
+                      Icons.location_on, 'Find local support resources'),
                 ],
               ),
             ],
@@ -428,7 +446,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     bool isBot = !message.isUser;
 
     // FIX: Define a comprehensive and consistent stylesheet for markdown with balanced fonts.
-    final markdownStyleSheet = MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+    final markdownStyleSheet =
+        MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
       p: const TextStyle(
         color: Colors.black87,
         fontSize: 15, // Increased from 14 to 15 - balanced size
@@ -486,10 +505,14 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       blockSpacing: 12,
       listIndent: 20,
     );
-    
+
     // Detect legal or emergency message
     bool isLegal = isBot && message.text.toLowerCase().contains("legal help");
-    bool isEmergency = isBot && (message.text.toLowerCase().contains("emergency") || message.text.toLowerCase().contains("your safety is my #1 priority"));
+    bool isEmergency = isBot &&
+        (message.text.toLowerCase().contains("emergency") ||
+            message.text
+                .toLowerCase()
+                .contains("your safety is my #1 priority"));
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -498,8 +521,9 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment:
-                message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: message.isUser
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
             children: [
               Flexible(
                 child: isLegal || isEmergency
@@ -532,21 +556,23 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                               ),
                               const SizedBox(width: 10),
                               Expanded(
-                                                                  child: MarkdownBody(
-                                    data: message.text,
-                                    // FIX: Apply a derived stylesheet for special cards with balanced fonts
-                                    styleSheet: markdownStyleSheet.copyWith(
-                                      p: const TextStyle(color: Colors.black87, fontSize: 14, fontFamily: 'NotoSansDevanagari'),
-                                      strong: TextStyle(
-                                          color: isLegal
-                                              ? const Color(0xFFFF9800)
-                                              : const Color(0xFFD32F2F),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14.5,
-                                          fontFamily: 'NotoSansDevanagari'
-                                      ),
-                                    ),
+                                child: MarkdownBody(
+                                  data: message.text,
+                                  // FIX: Apply a derived stylesheet for special cards with balanced fonts
+                                  styleSheet: markdownStyleSheet.copyWith(
+                                    p: const TextStyle(
+                                        color: Colors.black87,
+                                        fontSize: 14,
+                                        fontFamily: 'NotoSansDevanagari'),
+                                    strong: TextStyle(
+                                        color: isLegal
+                                            ? const Color(0xFFFF9800)
+                                            : const Color(0xFFD32F2F),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14.5,
+                                        fontFamily: 'NotoSansDevanagari'),
                                   ),
+                                ),
                               ),
                             ],
                           ),
@@ -571,7 +597,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                                 message.text,
                                 style: const TextStyle(
                                   color: Colors.black87,
-                                  fontSize: 15, // Increased from 14 to 15 - balanced size
+                                  fontSize:
+                                      15, // Increased from 14 to 15 - balanced size
                                   // No need for fontFamily here, it inherits from theme
                                 ),
                               ),
@@ -594,8 +621,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 const SizedBox(width: 8),
                 if (isBot) ...[
                   _buildLargeIconButton(
-                    icon: currentlySpeakingIndex == index && isTtsPlaying ? Icons.stop : Icons.volume_up,
-                    tooltip: currentlySpeakingIndex == index && isTtsPlaying ? 'Stop' : 'Speak',
+                    icon: currentlySpeakingIndex == index && isTtsPlaying
+                        ? Icons.stop
+                        : Icons.volume_up,
+                    tooltip: currentlySpeakingIndex == index && isTtsPlaying
+                        ? 'Stop'
+                        : 'Speak',
                     onPressed: () async {
                       if (currentlySpeakingIndex == index && isTtsPlaying) {
                         await flutterTts.stop();
@@ -650,7 +681,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     );
   }
 
-  Widget _buildLargeIconButton({required IconData icon, required String tooltip, required VoidCallback onPressed}) {
+  Widget _buildLargeIconButton(
+      {required IconData icon,
+      required String tooltip,
+      required VoidCallback onPressed}) {
     return SizedBox(
       width: 34,
       height: 34,
@@ -673,7 +707,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           CircleAvatar(
             radius: 16,
             backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-            child: Icon(FontAwesomeIcons.shield, size: 18, color: Theme.of(context).primaryColor),
+            child: Icon(FontAwesomeIcons.shield,
+                size: 18, color: Theme.of(context).primaryColor),
           ),
           const SizedBox(width: 12),
           Column(
@@ -726,14 +761,15 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       ),
     );
   }
-  
+
   Widget _buildMessageInput() {
     final isInputNotEmpty = _messageController.text.trim().isNotEmpty;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: const Border(top: BorderSide(color: Color(0xFFE0E0E0), width: 1)),
+        border:
+            const Border(top: BorderSide(color: Color(0xFFE0E0E0), width: 1)),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.04),
@@ -759,7 +795,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             const SizedBox(width: 10),
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF6F6FA),
                   borderRadius: BorderRadius.circular(32),
@@ -767,7 +804,9 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 ),
                 child: TextField(
                   controller: _messageController,
-                  style: const TextStyle(color: Colors.black87, fontSize: 14), // Increased from 13 to 14 - balanced size
+                  style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14), // Increased from 13 to 14 - balanced size
                   decoration: const InputDecoration(
                     contentPadding: EdgeInsets.symmetric(vertical: 12),
                     hintText: 'Type a message...',
@@ -793,13 +832,15 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFF69B4),
                   minimumSize: const Size(36, 48),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
                   ),
                 ),
                 icon: const Icon(Icons.stop, size: 20, color: Colors.white),
-                label: const Text('Stop', style: TextStyle(fontSize: 15, color: Colors.white)),
+                label: const Text('Stop',
+                    style: TextStyle(fontSize: 15, color: Colors.white)),
                 onPressed: () {
                   setState(() {
                     _stopRequested = true;
@@ -843,7 +884,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.auto_awesome, color: Color(0xFF6A1B9A)),
+                  icon:
+                      const Icon(Icons.auto_awesome, color: Color(0xFF6A1B9A)),
                   iconSize: 24,
                   onPressed: _onVoiceAssistantPressed,
                   tooltip: 'Voice Assistant',
@@ -899,8 +941,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                       height: 32,
                       width: 32,
                       fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.chat_bubble_outline, size: 24, color: Color(0xFF6A1B9A)),
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                          Icons.chat_bubble_outline,
+                          size: 24,
+                          color: Color(0xFF6A1B9A)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -933,7 +977,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 ],
               ),
             ),
-            
+
             // Search bar
             Container(
               margin: const EdgeInsets.all(16),
@@ -959,12 +1003,14 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                     isSearching ? Icons.search : Icons.search_outlined,
                     color: isSearching ? const Color(0xFF6A1B9A) : Colors.grey,
                   ),
-                  suffixIcon: isSearching ? IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.grey),
-                    onPressed: () {
-                      _searchController.clear();
-                    },
-                  ) : null,
+                  suffixIcon: isSearching
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.grey),
+                          onPressed: () {
+                            _searchController.clear();
+                          },
+                        )
+                      : null,
                   border: InputBorder.none,
                 ),
               ),
@@ -989,7 +1035,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                       ),
                       onPressed: () {
                         _startNewChat();
-                        Navigator.pop(context); // Close sidebar after creating new chat
+                        Navigator.pop(
+                            context); // Close sidebar after creating new chat
                       },
                     ),
                   ),
@@ -1044,7 +1091,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.history, color: Color(0xFF6A1B9A), size: 20),
+                          const Icon(Icons.history,
+                              color: Color(0xFF6A1B9A), size: 20),
                           const SizedBox(width: 8),
                           Text(
                             'Chat History',
@@ -1065,25 +1113,31 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                         ],
                       ),
                     ),
-                    
+
                     // Chat list
                     Expanded(
-                      child: (isSearching ? filteredChats : previousChats).isEmpty
+                      child: (isSearching ? filteredChats : previousChats)
+                              .isEmpty
                           ? _buildEmptyHistoryState()
                           : Column(
                               children: [
                                 if (isSearching && filteredChats.isNotEmpty)
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFE3F2FD),
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: const Color(0xFF2196F3), width: 1),
+                                      border: Border.all(
+                                          color: const Color(0xFF2196F3),
+                                          width: 1),
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.search, color: Color(0xFF2196F3), size: 16),
+                                        const Icon(Icons.search,
+                                            color: Color(0xFF2196F3), size: 16),
                                         const SizedBox(width: 8),
                                         Text(
                                           'Found ${filteredChats.length} result${filteredChats.length == 1 ? '' : 's'}',
@@ -1098,15 +1152,22 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                                   ),
                                 Expanded(
                                   child: ListView.builder(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    itemCount: isSearching ? filteredChats.length : previousChats.length,
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 8),
+                                    itemCount: isSearching
+                                        ? filteredChats.length
+                                        : previousChats.length,
                                     itemBuilder: (context, idx) {
-                                      final chat = isSearching ? filteredChats[idx] : previousChats[idx];
-                                      final title = _getSearchHighlightedTitle(chat, _searchController.text);
+                                      final chat = isSearching
+                                          ? filteredChats[idx]
+                                          : previousChats[idx];
+                                      final title = _getSearchHighlightedTitle(
+                                          chat, _searchController.text);
                                       final time = chat.isNotEmpty
                                           ? _formatTime(chat.first.timestamp)
                                           : '';
-                                      return _buildConversationItem(title, time, idx);
+                                      return _buildConversationItem(
+                                          title, time, idx);
                                     },
                                   ),
                                 ),
@@ -1246,7 +1307,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         ),
         onTap: () async {
           setState(() {
-            messages = List<ChatMessage>.from(isSearching ? filteredChats[idx] : previousChats[idx]);
+            messages = List<ChatMessage>.from(
+                isSearching ? filteredChats[idx] : previousChats[idx]);
           });
           await _saveCurrentChat();
           Navigator.pop(context);
@@ -1276,7 +1338,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            isSearching 
+            isSearching
                 ? 'Try different keywords or check your spelling'
                 : 'Start a conversation with Noira to see your chat history here',
             style: TextStyle(
@@ -1423,8 +1485,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     );
   }
 
-
-
   void _showDeleteMessageDialog(int index) {
     showDialog(
       context: context,
@@ -1520,14 +1580,14 @@ class ChatMessage {
   }) : timestamp = timestamp ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
-    'text': text,
-    'isUser': isUser,
-    'timestamp': timestamp.toIso8601String(),
-  };
+        'text': text,
+        'isUser': isUser,
+        'timestamp': timestamp.toIso8601String(),
+      };
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
-    text: json['text'],
-    isUser: json['isUser'],
-    timestamp: DateTime.parse(json['timestamp']),
-  );
+        text: json['text'],
+        isUser: json['isUser'],
+        timestamp: DateTime.parse(json['timestamp']),
+      );
 }
