@@ -80,7 +80,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   bool isTtsPlaying = false;
   bool _stopRequested = false;
 
-  final String _serverUrl = 'http://localhost:8000/chat';
+  final String _serverUrl =
+      'https://women-safety-backend-rfi8.onrender.com/chat';
 
   @override
   void initState() {

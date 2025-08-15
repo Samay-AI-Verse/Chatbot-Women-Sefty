@@ -46,6 +46,7 @@ dependencies:
   ionicons: ^0.2.2
   font_awesome_flutter: ^10.1.0
   flutter_markdown: ^0.7.7+1
+  flutter_dotenv: ^5.2.1
 
 dev_dependencies:
   flutter_test:
