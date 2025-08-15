@@ -920,13 +920,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
+                border: Border(
+                  bottom: BorderSide(
                     color: Colors.grey.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    width: 1,
                   ),
-                ],
+                ),
               ),
               child: Row(
                 children: [
@@ -942,9 +941,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                       width: 32,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) => const Icon(
-                          Icons.chat_bubble_outline,
-                          size: 24,
-                          color: Color(0xFF6A1B9A)),
+                        Icons.chat_bubble_outline,
+                        size: 24,
+                        color: Color(0xFF6A1B9A),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -978,124 +978,50 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               ),
             ),
 
-            // Search bar
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE0E0E0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+            // New Chat Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.add, size: 20),
+                  label: const Text(
+                    'New Chat',
+                    style: TextStyle(fontWeight: FontWeight.w500),
                   ),
-                ],
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search chat history...',
-                  hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-                  prefixIcon: Icon(
-                    isSearching ? Icons.search : Icons.search_outlined,
-                    color: isSearching ? const Color(0xFF6A1B9A) : Colors.grey,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6A1B9A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
                   ),
-                  suffixIcon: isSearching
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, color: Colors.grey),
-                          onPressed: () {
-                            _searchController.clear();
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
+                  onPressed: () {
+                    _startNewChat();
+                    Navigator.pop(context);
+                  },
                 ),
               ),
             ),
-
-            // Action buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('New Chat'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6A1B9A),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: () {
-                        _startNewChat();
-                        Navigator.pop(
-                            context); // Close sidebar after creating new chat
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.delete_outline, size: 18),
-                      label: const Text('Clear All'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red[50],
-                        foregroundColor: Colors.red[700],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: _showClearAllDialog,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
 
             // Chat history list
             Expanded(
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
                 child: Column(
                   children: [
                     // Header
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF8F8FA),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(12),
-                          topRight: Radius.circular(12),
-                        ),
-                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
                         children: [
                           const Icon(Icons.history,
                               color: Color(0xFF6A1B9A), size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            'Chat History',
+                            'Recent Chats',
                             style: TextStyle(
                               color: Theme.of(context).primaryColor,
                               fontSize: 16,
@@ -1104,7 +1030,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                           ),
                           const Spacer(),
                           Text(
-                            '${isSearching ? filteredChats.length : previousChats.length} chats',
+                            '${previousChats.length} chats',
                             style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 12,
@@ -1116,62 +1042,24 @@ class _ChatBotScreenState extends State<ChatBotScreen>
 
                     // Chat list
                     Expanded(
-                      child: (isSearching ? filteredChats : previousChats)
-                              .isEmpty
+                      child: previousChats.isEmpty
                           ? _buildEmptyHistoryState()
-                          : Column(
-                              children: [
-                                if (isSearching && filteredChats.isNotEmpty)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE3F2FD),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                          color: const Color(0xFF2196F3),
-                                          width: 1),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.search,
-                                            color: Color(0xFF2196F3), size: 16),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          'Found ${filteredChats.length} result${filteredChats.length == 1 ? '' : 's'}',
-                                          style: const TextStyle(
-                                            color: Color(0xFF2196F3),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                Expanded(
-                                  child: ListView.builder(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 8),
-                                    itemCount: isSearching
-                                        ? filteredChats.length
-                                        : previousChats.length,
-                                    itemBuilder: (context, idx) {
-                                      final chat = isSearching
-                                          ? filteredChats[idx]
-                                          : previousChats[idx];
-                                      final title = _getSearchHighlightedTitle(
-                                          chat, _searchController.text);
-                                      final time = chat.isNotEmpty
-                                          ? _formatTime(chat.first.timestamp)
-                                          : '';
-                                      return _buildConversationItem(
-                                          title, time, idx);
-                                    },
-                                  ),
-                                ),
-                              ],
+                          : ListView.builder(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.only(top: 8),
+                              itemCount: previousChats.length,
+                              itemBuilder: (context, idx) {
+                                final chat = previousChats[idx];
+                                final title = chat.isNotEmpty
+                                    ? (chat.first.isUser
+                                        ? chat.first.text
+                                        : 'Chat')
+                                    : 'Chat';
+                                final time = chat.isNotEmpty
+                                    ? _formatTime(chat.first.timestamp)
+                                    : '';
+                                return _buildConversationItem(title, time, idx);
+                              },
                             ),
                     ),
                   ],
@@ -1179,58 +1067,47 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               ),
             ),
 
-            const SizedBox(height: 16),
-
             // User profile section
             Container(
               margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    blurRadius: 4,
+                    color: Colors.grey.withOpacity(0.05),
+                    blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Color(0xFFF3E5F5),
-                    child: Icon(Icons.person, color: Color(0xFF6A1B9A)),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Color(0xFFF3E5F5),
+                  child: Icon(Icons.person, color: Color(0xFF6A1B9A)),
+                ),
+                title: const Text(
+                  'Samay Powade',
+                  style: TextStyle(
+                    color: Color(0xFF36013F),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Samay Powade',
-                          style: TextStyle(
-                            color: Color(0xFF36013F),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          'Safety First',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+                subtitle: const Text(
+                  'Safety First',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.settings, color: Color(0xFF6A1B9A)),
-                    onPressed: () {},
-                  ),
-                ],
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.settings, color: Color(0xFF6A1B9A)),
+                  onPressed: () {},
+                ),
+                contentPadding: EdgeInsets.zero,
               ),
             ),
           ],
@@ -1249,70 +1126,118 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   }
 
   Widget _buildConversationItem(String title, String time, int idx) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF3E5F5),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(
-            Icons.chat_bubble_outline,
-            color: Color(0xFF6A1B9A),
-            size: 20,
+    return Dismissible(
+      key: Key('chat_$idx'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: Colors.red.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: EdgeInsets.only(right: 20),
+            child: Icon(Icons.delete, color: Colors.red),
           ),
         ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          time,
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 12,
-          ),
-        ),
-        trailing: PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, color: Colors.grey),
-          onSelected: (value) {
-            if (value == 'delete') {
-              _showDeleteChatDialog(idx);
-            }
+      ),
+      confirmDismiss: (direction) async {
+        return await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text('Delete Chat'),
+              content: const Text('Are you sure you want to delete this chat?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Delete'),
+                ),
+              ],
+            );
           },
-          itemBuilder: (context) => [
-            const PopupMenuItem<String>(
-              value: 'delete',
+        );
+      },
+      onDismissed: (direction) {
+        _deleteChat(idx);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () async {
+              setState(() {
+                messages = List<ChatMessage>.from(previousChats[idx]);
+              });
+              await _saveCurrentChat();
+              Navigator.pop(context);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Row(
                 children: [
-                  Icon(Icons.delete_outline, color: Colors.red, size: 18),
-                  SizedBox(width: 8),
-                  Text('Delete Chat'),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3E5F5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.chat_bubble_outline,
+                      color: Color(0xFF6A1B9A),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title.length > 30
+                              ? '${title.substring(0, 30)}...'
+                              : title,
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          time,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.grey),
                 ],
               ),
             ),
-          ],
+          ),
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        onTap: () async {
-          setState(() {
-            messages = List<ChatMessage>.from(
-                isSearching ? filteredChats[idx] : previousChats[idx]);
-          });
-          await _saveCurrentChat();
-          Navigator.pop(context);
-        },
       ),
     );
   }
@@ -1323,47 +1248,31 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            isSearching ? Icons.search_off : Icons.history,
+            Icons.history,
             size: 64,
-            color: Colors.grey[400],
+            color: Colors.grey[300],
           ),
           const SizedBox(height: 16),
-          Text(
-            isSearching ? 'No search results found' : 'No chat history',
+          const Text(
+            'No chat history',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
+              color: Colors.grey,
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            isSearching
-                ? 'Try different keywords or check your spelling'
-                : 'Start a conversation with Noira to see your chat history here',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (isSearching) ...[
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.clear, size: 16),
-              label: const Text('Clear Search'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[200],
-                foregroundColor: Colors.grey[700],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              'Start a conversation with Noira to see your chat history here',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
               ),
-              onPressed: () {
-                _searchController.clear();
-              },
+              textAlign: TextAlign.center,
             ),
-          ],
+          ),
         ],
       ),
     );
