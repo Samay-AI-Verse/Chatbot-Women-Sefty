@@ -5,7 +5,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-import 'dart:async'; // Import for TimeoutException
+import 'dart:async'; // Import for TimeoutException and Timer
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // Import the markdown package
 
@@ -27,7 +27,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Noira AI Chat Bot',
+      title: 'Shakti AI Chat Bot',
       theme: ThemeData(
         primaryColor:
             const Color(0xFF36013F), // Deep purple for a professional feel
@@ -81,7 +81,9 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   bool _stopRequested = false;
 
   final String _serverUrl =
-      'https://women-safety-backend-rfi8.onrender.com/chat';
+      'https://women-safety-backend-host.onrender.com/chat';
+
+  Timer? _searchDebounceTimer;
 
   @override
   void initState() {
@@ -105,22 +107,54 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     _messageController.dispose();
     _scrollController.dispose();
     _searchController.dispose();
+    _searchDebounceTimer?.cancel();
     super.dispose();
   }
 
   void _onSearchChanged() {
-    final query = _searchController.text.toLowerCase().trim();
-    setState(() {
-      isSearching = query.isNotEmpty;
-      if (query.isEmpty) {
-        filteredChats = List.from(previousChats);
-      } else {
-        filteredChats = previousChats.where((chat) {
-          return chat
-              .any((message) => message.text.toLowerCase().contains(query));
-        }).toList();
+    // Cancel previous timer
+    _searchDebounceTimer?.cancel();
+    
+    // Debounce search to prevent excessive rebuilds
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      final query = _searchController.text.toLowerCase().trim();
+      final wasSearching = isSearching;
+      final newIsSearching = query.isNotEmpty;
+      
+      // Only update state if there's an actual change
+      if (wasSearching != newIsSearching || 
+          (newIsSearching && (filteredChats.isEmpty || 
+           !_areChatsEqual(filteredChats, _getFilteredChats(query))))) {
+        setState(() {
+          isSearching = newIsSearching;
+          if (query.isEmpty) {
+            filteredChats = List.from(previousChats);
+          } else {
+            filteredChats = _getFilteredChats(query);
+          }
+        });
       }
     });
+  }
+
+  List<List<ChatMessage>> _getFilteredChats(String query) {
+    return previousChats.where((chat) {
+      return chat.any((message) => message.text.toLowerCase().contains(query));
+    }).toList();
+  }
+
+  bool _areChatsEqual(List<List<ChatMessage>> chats1, List<List<ChatMessage>> chats2) {
+    if (chats1.length != chats2.length) return false;
+    for (int i = 0; i < chats1.length; i++) {
+      if (chats1[i].length != chats2[i].length) return false;
+      for (int j = 0; j < chats1[i].length; j++) {
+        if (chats1[i][j].text != chats2[i][j].text || 
+            chats1[i][j].isUser != chats2[i][j].isUser) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   String _getSearchHighlightedTitle(List<ChatMessage> chat, String query) {
@@ -232,11 +266,79 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       userMsgIndex--;
     }
     if (userMsgIndex < 0) return;
-    final userMsg = messages[userMsgIndex].text;
+    
+    // Remove the old bot response
     setState(() {
       messages.removeAt(botMsgIndex);
     });
-    await _sendMessage(userMsg);
+    
+    // Show typing indicator
+    setState(() {
+      isTyping = true;
+      _stopRequested = false;
+    });
+    
+    // Get the user's original message
+    final userMsg = messages[userMsgIndex].text;
+    
+    // Send request to get new response
+    try {
+      final response = await http
+          .post(
+            Uri.parse(_serverUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'message': userMsg}),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (_stopRequested) {
+        setState(() => isTyping = false);
+        return;
+      }
+      
+      if (response.statusCode == 200) {
+        final responseBody = utf8.decode(response.bodyBytes);
+        final data = jsonDecode(responseBody);
+        setState(() {
+          messages.add(ChatMessage(
+            text: data['reply'] ?? 'No response from server.',
+            isUser: false,
+          ));
+          isTyping = false;
+        });
+      } else {
+        setState(() {
+          messages.add(ChatMessage(
+            text: 'Server Error ${response.statusCode}: Could not get a valid response.',
+            isUser: false,
+          ));
+          isTyping = false;
+        });
+      }
+    } catch (e) {
+      if (_stopRequested) {
+        setState(() => isTyping = false);
+        return;
+      }
+      
+      String errorMessage;
+      if (e is TimeoutException) {
+        errorMessage = "Connection Timed Out.\n\nIs the Python server running and responsive?";
+      } else {
+        errorMessage = "Connection Failed.\n\n- Is the Python server running on your computer?\n- Is a firewall blocking the connection?";
+      }
+
+      setState(() {
+        messages.add(ChatMessage(
+          text: errorMessage,
+          isUser: false,
+        ));
+        isTyping = false;
+      });
+    }
+    
+    _scrollToBottom();
+    await _saveCurrentChat();
   }
 
   Future<void> _saveCurrentChat() async {
@@ -331,7 +433,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                   const Icon(Icons.chat_bubble_outline, size: 40),
             ),
             const SizedBox(width: 2),
-            const Text('Noira'),
+            const Text('Shakti'),
           ],
         ),
         actions: [
@@ -383,7 +485,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               ),
               const SizedBox(height: 24),
               const Text(
-                'Hello, I\'m Noira',
+                'Hello, I\'m Shakti',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 22,
@@ -451,56 +553,56 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
       p: const TextStyle(
         color: Colors.black87,
-        fontSize: 15, // Increased from 14 to 15 - balanced size
+        fontSize: 20, // Further increased font size for better readability
         height: 1.5,
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       strong: const TextStyle(
         color: Color(0xFF36013F),
         fontWeight: FontWeight.bold,
-        fontSize: 15.5, // Increased from 14.5 to 15.5 - balanced size
+        fontSize: 20.5, // Further increased font size for better readability
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       h1: const TextStyle(
         color: Color(0xFF36013F),
         fontWeight: FontWeight.bold,
-        fontSize: 19, // Increased from 18 to 19 - balanced size
+        fontSize: 24, // Further increased font size for better readability
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       h2: const TextStyle(
         color: Color(0xFF6A1B9A),
         fontWeight: FontWeight.bold,
-        fontSize: 17, // Increased from 16 to 17 - balanced size
+        fontSize: 22, // Further increased font size for better readability
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       h3: const TextStyle(
         color: Color(0xFF8E24AA),
         fontWeight: FontWeight.bold,
-        fontSize: 16, // Increased from 15 to 16 - balanced size
+        fontSize: 21, // Further increased font size for better readability
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       listBullet: const TextStyle(
         color: Color(0xFF36013F),
-        fontSize: 15, // Increased from 14 to 15 - balanced size
+        fontSize: 20, // Further increased font size for better readability
         height: 1.5,
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       blockquote: const TextStyle(
         color: Colors.black54,
         fontStyle: FontStyle.italic,
-        fontSize: 14, // Increased from 13 to 14 - balanced size
+        fontSize: 19, // Further increased font size for better readability
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       code: const TextStyle(
         backgroundColor: Color(0xFFF3E5F5),
         color: Color(0xFF6A1B9A),
         fontFamily: 'monospace',
-        fontSize: 14, // Increased from 13 to 14 - balanced size
+        fontSize: 18, // Further increased font size for better readability
       ),
       tableHead: const TextStyle(
         fontWeight: FontWeight.bold,
         color: Color(0xFF36013F),
-        fontSize: 15, // Increased from 14 to 15 - balanced size
+        fontSize: 20, // Further increased font size for better readability
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       blockSpacing: 12,
@@ -545,18 +647,37 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                isLegal ? Icons.gavel : Icons.warning,
-                                color: isLegal
-                                    ? const Color(0xFFFF9800)
-                                    : const Color(0xFFD32F2F),
-                                size: 24,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
+                          child: isLegal 
+                            ? Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.gavel,
+                                    color: const Color(0xFFFF9800),
+                                    size: 24,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: MarkdownBody(
+                                      data: message.text,
+                                      // FIX: Apply a derived stylesheet for special cards with balanced fonts
+                                      styleSheet: markdownStyleSheet.copyWith(
+                                        p: const TextStyle(
+                                            color: Colors.black87,
+                                            fontSize: 14,
+                                            fontFamily: 'NotoSansDevanagari'),
+                                        strong: const TextStyle(
+                                            color: Color(0xFFFF9800),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14.5,
+                                            fontFamily: 'NotoSansDevanagari'),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                 child: MarkdownBody(
                                   data: message.text,
                                   // FIX: Apply a derived stylesheet for special cards with balanced fonts
@@ -565,18 +686,14 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                                         color: Colors.black87,
                                         fontSize: 14,
                                         fontFamily: 'NotoSansDevanagari'),
-                                    strong: TextStyle(
-                                        color: isLegal
-                                            ? const Color(0xFFFF9800)
-                                            : const Color(0xFFD32F2F),
+                                    strong: const TextStyle(
+                                        color: Color(0xFFD32F2F),
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14.5,
                                         fontFamily: 'NotoSansDevanagari'),
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
                         ),
                       )
                     : Container(
@@ -607,7 +724,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               ),
             ],
           ),
-          Padding(
+          if (isBot) Padding(
             padding: const EdgeInsets.only(left: 8.0, top: 2.0),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -620,58 +737,48 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                   },
                 ),
                 const SizedBox(width: 8),
-                if (isBot) ...[
-                  _buildLargeIconButton(
-                    icon: currentlySpeakingIndex == index && isTtsPlaying
-                        ? Icons.stop
-                        : Icons.volume_up,
-                    tooltip: currentlySpeakingIndex == index && isTtsPlaying
-                        ? 'Stop'
-                        : 'Speak',
-                    onPressed: () async {
-                      if (currentlySpeakingIndex == index && isTtsPlaying) {
-                        await flutterTts.stop();
+                _buildLargeIconButton(
+                  icon: currentlySpeakingIndex == index && isTtsPlaying
+                      ? Icons.stop
+                      : Icons.volume_up,
+                  tooltip: currentlySpeakingIndex == index && isTtsPlaying
+                      ? 'Stop'
+                      : 'Speak',
+                  onPressed: () async {
+                    if (currentlySpeakingIndex == index && isTtsPlaying) {
+                      await flutterTts.stop();
+                      setState(() {
+                        isTtsPlaying = false;
+                        currentlySpeakingIndex = null;
+                      });
+                    } else {
+                      await flutterTts.stop();
+                      setState(() {
+                        currentlySpeakingIndex = index;
+                        isTtsPlaying = true;
+                      });
+                      await flutterTts.speak(message.text);
+                      flutterTts.setCompletionHandler(() {
                         setState(() {
                           isTtsPlaying = false;
                           currentlySpeakingIndex = null;
                         });
-                      } else {
-                        await flutterTts.stop();
+                      });
+                      flutterTts.setCancelHandler(() {
                         setState(() {
-                          currentlySpeakingIndex = index;
-                          isTtsPlaying = true;
+                          isTtsPlaying = false;
+                          currentlySpeakingIndex = null;
                         });
-                        await flutterTts.speak(message.text);
-                        flutterTts.setCompletionHandler(() {
-                          setState(() {
-                            isTtsPlaying = false;
-                            currentlySpeakingIndex = null;
-                          });
-                        });
-                        flutterTts.setCancelHandler(() {
-                          setState(() {
-                            isTtsPlaying = false;
-                            currentlySpeakingIndex = null;
-                          });
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  _buildLargeIconButton(
-                    icon: Icons.refresh,
-                    tooltip: 'Regenerate',
-                    onPressed: () {
-                      _regenerateResponse(index);
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                ],
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
                 _buildLargeIconButton(
-                  icon: Icons.delete_outline,
-                  tooltip: 'Delete',
+                  icon: Icons.refresh,
+                  tooltip: 'Regenerate',
                   onPressed: () {
-                    _showDeleteMessageDialog(index);
+                    _regenerateResponse(index);
                   },
                 ),
               ],
@@ -716,7 +823,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Noira is typing...",
+                "Shakti is typing...",
                 style: TextStyle(
                   color: Theme.of(context).primaryColor,
                   fontWeight: FontWeight.w500,
@@ -818,7 +925,11 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                     border: InputBorder.none,
                   ),
                   onChanged: (text) {
-                    setState(() {});
+                    // Only rebuild if the input state actually changes
+                    final newIsInputNotEmpty = text.trim().isNotEmpty;
+                    if (newIsInputNotEmpty != isInputNotEmpty) {
+                      setState(() {});
+                    }
                   },
                   onSubmitted: _sendMessage,
                   minLines: 1,
@@ -909,214 +1020,294 @@ class _ChatBotScreenState extends State<ChatBotScreen>
 
   void _onVoiceAssistantPressed() {}
 
-  Widget _buildSideNavigation() {
-    return Drawer(
-      backgroundColor: const Color(0xFFFAFAFA),
-      width: MediaQuery.of(context).size.width * 0.85,
-      child: SafeArea(
-        child: Column(
-          children: [
-            // Header with logo and title
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.grey.withOpacity(0.1),
-                    width: 1,
-                  ),
+// ... (Previous code remains unchanged)
+
+// ... (Previous code remains unchanged)
+
+Widget _buildSideNavigation() {
+  return Drawer(
+    backgroundColor: const Color(0xFFFAFAFA),
+    width: MediaQuery.of(context).size.width * 0.90,
+    child: SafeArea(
+      child: Column(
+        children: [
+          // Header with logo and title
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.grey.withOpacity(0.1),
+                  width: 1,
                 ),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3E5F5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Image.asset(
-                      'assets/logo2.png',
-                      height: 32,
-                      width: 32,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.chat_bubble_outline,
-                        size: 24,
-                        color: Color(0xFF6A1B9A),
-                      ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3E5F5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Image.asset(
+                    'assets/logo2.png',
+                    height: 32,
+                    width: 32,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.chat_bubble_outline,
+                      size: 24,
+                      color: Color(0xFF6A1B9A),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Shakti',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF36013F),
+                        ),
+                      ),
+                      Text(
+                        'AI Safety Assistant',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.grey),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+
+          // New Chat Button
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text(
+                  'New Chat',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: const Color(0xFF6A1B9A),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: const BorderSide(color: Color(0xFF6A1B9A)),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  elevation: 0,
+                ),
+                onPressed: () {
+                  _startNewChat();
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+          ),
+
+          // Chat history list
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
                       children: [
+                        const Icon(Icons.history,
+                            color: Color(0xFF6A1B9A), size: 20),
+                        const SizedBox(width: 8),
                         Text(
-                          'Noira',
+                          'Recent Chats',
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF36013F),
+                            color: Theme.of(context).primaryColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
+                        const Spacer(),
                         Text(
-                          'AI Safety Assistant',
-                          style: TextStyle(
-                            fontSize: 12,
+                          '${previousChats.length} chats',
+                          style: const TextStyle(
                             color: Colors.grey,
+                            fontSize: 12,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey),
-                    onPressed: () => Navigator.pop(context),
+
+                  // Chat list
+                  Expanded(
+                    child: previousChats.isEmpty
+                        ? _buildEmptyHistoryState()
+                        : ListView.builder(
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.only(top: 8),
+                            itemCount: previousChats.length,
+                            itemBuilder: (context, idx) {
+                              final chat = previousChats[idx];
+                              final title = chat.isNotEmpty
+                                  ? (chat.first.isUser
+                                      ? chat.first.text
+                                      : 'Chat')
+                                  : 'Chat';
+                              final time = chat.isNotEmpty
+                                  ? _formatTime(chat.first.timestamp)
+                                  : '';
+                              return _buildConversationItem(title, time, idx);
+                            },
+                          ),
                   ),
                 ],
               ),
             ),
+          ),
 
-            // New Chat Button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.add, size: 20),
-                  label: const Text(
-                    'New Chat',
-                    style: TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6A1B9A),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    _startNewChat();
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-            ),
-
-            // Chat history list
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
-                    // Header
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.history,
-                              color: Color(0xFF6A1B9A), size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Recent Chats',
-                            style: TextStyle(
-                              color: Theme.of(context).primaryColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '${previousChats.length} chats',
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Chat list
-                    Expanded(
-                      child: previousChats.isEmpty
-                          ? _buildEmptyHistoryState()
-                          : ListView.builder(
-                              physics: const BouncingScrollPhysics(),
-                              padding: const EdgeInsets.only(top: 8),
-                              itemCount: previousChats.length,
-                              itemBuilder: (context, idx) {
-                                final chat = previousChats[idx];
-                                final title = chat.isNotEmpty
-                                    ? (chat.first.isUser
-                                        ? chat.first.text
-                                        : 'Chat')
-                                    : 'Chat';
-                                final time = chat.isNotEmpty
-                                    ? _formatTime(chat.first.timestamp)
-                                    : '';
-                                return _buildConversationItem(title, time, idx);
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // User profile section
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: ListTile(
-                leading: const CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Color(0xFFF3E5F5),
-                  child: Icon(Icons.person, color: Color(0xFF6A1B9A)),
-                ),
-                title: const Text(
-                  'Samay Powade',
+          // Quick Resources Section - Adjusted to move downward and reduce gap
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8), // Reduced bottom padding to minimize gap
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Quick Resources',
                   style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
                     color: Color(0xFF36013F),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                subtitle: const Text(
-                  'Safety First',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
+                const SizedBox(height: 16),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: [
+                      _buildResourceBox('Safety Tips', Icons.security),
+                      _buildResourceBox('Emergency Help', Icons.warning),
+                      _buildResourceBox('Legal Support', Icons.gavel),
+                      _buildResourceBox('Support Groups', Icons.group),
+                      _buildResourceBox('Self Defense', Icons.shield),
+                    ],
                   ),
                 ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.settings, color: Color(0xFF6A1B9A)),
-                  onPressed: () {},
-                ),
-                contentPadding: EdgeInsets.zero,
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 0), // Added to push content downward
+          // User profile section
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.05),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ListTile(
+              leading: const CircleAvatar(
+                radius: 20,
+                backgroundColor: Color(0xFFF3E5F5),
+                child: Icon(Icons.person, color: Color(0xFF6A1B9A)),
+              ),
+              title: const Text(
+                'Samay Powade',
+                style: TextStyle(
+                  color: Color(0xFF36013F),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: const Text(
+                'Safety First',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                ),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.settings, color: Color(0xFF6A1B9A)),
+                onPressed: () {},
+              ),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
+Widget _buildResourceBox(String label, IconData icon) {
+  return GestureDetector(
+    onTap: () {
+      _sendMessage(label);
+      Navigator.pop(context);
+    },
+    child: Container(
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3E5F5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF6A1B9A), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 24, color: const Color(0xFF6A1B9A)),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF6A1B9A),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+// ... (Rest of the code remains unchanged)
   String _formatTime(DateTime dt) {
     final now = DateTime.now();
     if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
@@ -1266,7 +1457,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              'Start a conversation with Noira to see your chat history here',
+              'Start a conversation with Shakti to see your chat history here',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey,
@@ -1360,39 +1551,78 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   }
 
   void _deleteChat(int idx) {
-    setState(() {
-      if (isSearching) {
-        final chatToDelete = filteredChats[idx];
-        final originalIndex = previousChats.indexOf(chatToDelete);
-        if (originalIndex != -1) {
-          previousChats.removeAt(originalIndex);
+    try {
+      setState(() {
+        if (isSearching) {
+          // Check if index is valid for filtered chats
+          if (idx >= 0 && idx < filteredChats.length) {
+            final chatToDelete = filteredChats[idx];
+            final originalIndex = previousChats.indexOf(chatToDelete);
+            if (originalIndex != -1) {
+              previousChats.removeAt(originalIndex);
+            }
+            filteredChats.removeAt(idx);
+          }
+        } else {
+          // Check if index is valid for previous chats
+          if (idx >= 0 && idx < previousChats.length) {
+            previousChats.removeAt(idx);
+          }
         }
-        filteredChats.removeAt(idx);
-      } else {
-        previousChats.removeAt(idx);
+      });
+      
+      // Update filtered chats to match previous chats
+      if (isSearching) {
+        final query = _searchController.text.toLowerCase().trim();
+        if (query.isEmpty) {
+          filteredChats = List.from(previousChats);
+        } else {
+          filteredChats = previousChats.where((chat) {
+            return chat.any((message) => message.text.toLowerCase().contains(query));
+          }).toList();
+        }
       }
-    });
-    _saveAllChats();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Chat deleted successfully'),
-        backgroundColor: Colors.green,
-      ),
-    );
+      
+      _saveAllChats();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chat deleted successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Error deleting chat: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error deleting chat. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _clearAllChats() {
-    setState(() {
-      previousChats.clear();
-      filteredChats.clear();
-    });
-    _saveAllChats();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('All chats cleared successfully'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    try {
+      setState(() {
+        previousChats.clear();
+        filteredChats.clear();
+      });
+      _saveAllChats();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All chats cleared successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Error clearing all chats: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error clearing chats. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _showDeleteMessageDialog(int index) {
@@ -1436,16 +1666,28 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   }
 
   void _deleteMessage(int index) {
-    setState(() {
-      messages.removeAt(index);
-    });
-    _saveCurrentChat();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Message deleted successfully bo'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    try {
+      if (index >= 0 && index < messages.length) {
+        setState(() {
+          messages.removeAt(index);
+        });
+        _saveCurrentChat();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Message deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error deleting message: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error deleting message. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildSuggestionButton(IconData icon, String text) {
