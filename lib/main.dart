@@ -114,17 +114,18 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   void _onSearchChanged() {
     // Cancel previous timer
     _searchDebounceTimer?.cancel();
-    
+
     // Debounce search to prevent excessive rebuilds
     _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
       final query = _searchController.text.toLowerCase().trim();
       final wasSearching = isSearching;
       final newIsSearching = query.isNotEmpty;
-      
+
       // Only update state if there's an actual change
-      if (wasSearching != newIsSearching || 
-          (newIsSearching && (filteredChats.isEmpty || 
-           !_areChatsEqual(filteredChats, _getFilteredChats(query))))) {
+      if (wasSearching != newIsSearching ||
+          (newIsSearching &&
+              (filteredChats.isEmpty ||
+                  !_areChatsEqual(filteredChats, _getFilteredChats(query))))) {
         setState(() {
           isSearching = newIsSearching;
           if (query.isEmpty) {
@@ -143,12 +144,13 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     }).toList();
   }
 
-  bool _areChatsEqual(List<List<ChatMessage>> chats1, List<List<ChatMessage>> chats2) {
+  bool _areChatsEqual(
+      List<List<ChatMessage>> chats1, List<List<ChatMessage>> chats2) {
     if (chats1.length != chats2.length) return false;
     for (int i = 0; i < chats1.length; i++) {
       if (chats1[i].length != chats2[i].length) return false;
       for (int j = 0; j < chats1[i].length; j++) {
-        if (chats1[i][j].text != chats2[i][j].text || 
+        if (chats1[i][j].text != chats2[i][j].text ||
             chats1[i][j].isUser != chats2[i][j].isUser) {
           return false;
         }
@@ -266,21 +268,21 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       userMsgIndex--;
     }
     if (userMsgIndex < 0) return;
-    
+
     // Remove the old bot response
     setState(() {
       messages.removeAt(botMsgIndex);
     });
-    
+
     // Show typing indicator
     setState(() {
       isTyping = true;
       _stopRequested = false;
     });
-    
+
     // Get the user's original message
     final userMsg = messages[userMsgIndex].text;
-    
+
     // Send request to get new response
     try {
       final response = await http
@@ -295,7 +297,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         setState(() => isTyping = false);
         return;
       }
-      
+
       if (response.statusCode == 200) {
         final responseBody = utf8.decode(response.bodyBytes);
         final data = jsonDecode(responseBody);
@@ -309,7 +311,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       } else {
         setState(() {
           messages.add(ChatMessage(
-            text: 'Server Error ${response.statusCode}: Could not get a valid response.',
+            text:
+                'Server Error ${response.statusCode}: Could not get a valid response.',
             isUser: false,
           ));
           isTyping = false;
@@ -320,12 +323,14 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         setState(() => isTyping = false);
         return;
       }
-      
+
       String errorMessage;
       if (e is TimeoutException) {
-        errorMessage = "Connection Timed Out.\n\nIs the Python server running and responsive?";
+        errorMessage =
+            "Connection Timed Out.\n\nIs the Python server running and responsive?";
       } else {
-        errorMessage = "Connection Failed.\n\n- Is the Python server running on your computer?\n- Is a firewall blocking the connection?";
+        errorMessage =
+            "Connection Failed.\n\n- Is the Python server running on your computer?\n- Is a firewall blocking the connection?";
       }
 
       setState(() {
@@ -336,7 +341,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         isTyping = false;
       });
     }
-    
+
     _scrollToBottom();
     await _saveCurrentChat();
   }
@@ -543,7 +548,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     );
   }
 
-  // WIDGET FULLY REVISED TO FIX FONT ISSUES
+// WIDGET FULLY REVISED TO FIX FONT ISSUES
   Widget _buildMessageBubble(ChatMessage message) {
     int index = messages.indexOf(message);
     bool isBot = !message.isUser;
@@ -553,56 +558,56 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
       p: const TextStyle(
         color: Colors.black87,
-        fontSize: 20, // Further increased font size for better readability
+        fontSize: 16, // Decreased font size for better readability
         height: 1.5,
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       strong: const TextStyle(
         color: Color(0xFF36013F),
         fontWeight: FontWeight.bold,
-        fontSize: 20.5, // Further increased font size for better readability
+        fontSize: 16.5, // Decreased font size
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       h1: const TextStyle(
         color: Color(0xFF36013F),
         fontWeight: FontWeight.bold,
-        fontSize: 24, // Further increased font size for better readability
+        fontSize: 20, // Decreased font size
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       h2: const TextStyle(
         color: Color(0xFF6A1B9A),
         fontWeight: FontWeight.bold,
-        fontSize: 22, // Further increased font size for better readability
+        fontSize: 18, // Decreased font size
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       h3: const TextStyle(
         color: Color(0xFF8E24AA),
         fontWeight: FontWeight.bold,
-        fontSize: 21, // Further increased font size for better readability
+        fontSize: 17, // Decreased font size
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       listBullet: const TextStyle(
         color: Color(0xFF36013F),
-        fontSize: 20, // Further increased font size for better readability
+        fontSize: 16, // Decreased font size
         height: 1.5,
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       blockquote: const TextStyle(
         color: Colors.black54,
         fontStyle: FontStyle.italic,
-        fontSize: 19, // Further increased font size for better readability
+        fontSize: 15, // Decreased font size
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       code: const TextStyle(
         backgroundColor: Color(0xFFF3E5F5),
         color: Color(0xFF6A1B9A),
         fontFamily: 'monospace',
-        fontSize: 18, // Further increased font size for better readability
+        fontSize: 14, // Decreased font size
       ),
       tableHead: const TextStyle(
         fontWeight: FontWeight.bold,
         color: Color(0xFF36013F),
-        fontSize: 20, // Further increased font size for better readability
+        fontSize: 16, // Decreased font size
         fontFamily: 'NotoSansDevanagari', // Ensure font is applied
       ),
       blockSpacing: 12,
@@ -647,53 +652,54 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
-                          child: isLegal 
-                            ? Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    Icons.gavel,
-                                    color: const Color(0xFFFF9800),
-                                    size: 24,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: MarkdownBody(
-                                      data: message.text,
-                                      // FIX: Apply a derived stylesheet for special cards with balanced fonts
-                                      styleSheet: markdownStyleSheet.copyWith(
-                                        p: const TextStyle(
-                                            color: Colors.black87,
-                                            fontSize: 14,
-                                            fontFamily: 'NotoSansDevanagari'),
-                                        strong: const TextStyle(
-                                            color: Color(0xFFFF9800),
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14.5,
-                                            fontFamily: 'NotoSansDevanagari'),
+                          child: isLegal
+                              ? Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.gavel,
+                                      color: const Color(0xFFFF9800),
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: MarkdownBody(
+                                        data: message.text,
+                                        // FIX: Apply a derived stylesheet for special cards with balanced fonts
+                                        styleSheet: markdownStyleSheet.copyWith(
+                                          p: const TextStyle(
+                                              color: Colors.black87,
+                                              fontSize: 14,
+                                              fontFamily: 'NotoSansDevanagari'),
+                                          strong: const TextStyle(
+                                              color: Color(0xFFFF9800),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14.5,
+                                              fontFamily: 'NotoSansDevanagari'),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              )
-                            : Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                child: MarkdownBody(
-                                  data: message.text,
-                                  // FIX: Apply a derived stylesheet for special cards with balanced fonts
-                                  styleSheet: markdownStyleSheet.copyWith(
-                                    p: const TextStyle(
-                                        color: Colors.black87,
-                                        fontSize: 14,
-                                        fontFamily: 'NotoSansDevanagari'),
-                                    strong: const TextStyle(
-                                        color: Color(0xFFD32F2F),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14.5,
-                                        fontFamily: 'NotoSansDevanagari'),
+                                  ],
+                                )
+                              : Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
+                                  child: MarkdownBody(
+                                    data: message.text,
+                                    // FIX: Apply a derived stylesheet for special cards with balanced fonts
+                                    styleSheet: markdownStyleSheet.copyWith(
+                                      p: const TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 14,
+                                          fontFamily: 'NotoSansDevanagari'),
+                                      strong: const TextStyle(
+                                          color: Color(0xFFD32F2F),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14.5,
+                                          fontFamily: 'NotoSansDevanagari'),
+                                    ),
                                   ),
                                 ),
-                              ),
                         ),
                       )
                     : Container(
@@ -715,8 +721,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                                 message.text,
                                 style: const TextStyle(
                                   color: Colors.black87,
-                                  fontSize:
-                                      15, // Increased from 14 to 15 - balanced size
+                                  fontSize: 16, // Decreased to 16
                                   // No need for fontFamily here, it inherits from theme
                                 ),
                               ),
@@ -724,66 +729,67 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               ),
             ],
           ),
-          if (isBot) Padding(
-            padding: const EdgeInsets.only(left: 8.0, top: 2.0),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildLargeIconButton(
-                  icon: Icons.copy,
-                  tooltip: 'Copy',
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: message.text));
-                  },
-                ),
-                const SizedBox(width: 8),
-                _buildLargeIconButton(
-                  icon: currentlySpeakingIndex == index && isTtsPlaying
-                      ? Icons.stop
-                      : Icons.volume_up,
-                  tooltip: currentlySpeakingIndex == index && isTtsPlaying
-                      ? 'Stop'
-                      : 'Speak',
-                  onPressed: () async {
-                    if (currentlySpeakingIndex == index && isTtsPlaying) {
-                      await flutterTts.stop();
-                      setState(() {
-                        isTtsPlaying = false;
-                        currentlySpeakingIndex = null;
-                      });
-                    } else {
-                      await flutterTts.stop();
-                      setState(() {
-                        currentlySpeakingIndex = index;
-                        isTtsPlaying = true;
-                      });
-                      await flutterTts.speak(message.text);
-                      flutterTts.setCompletionHandler(() {
+          if (isBot)
+            Padding(
+              padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildLargeIconButton(
+                    icon: Icons.copy,
+                    tooltip: 'Copy',
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: message.text));
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildLargeIconButton(
+                    icon: currentlySpeakingIndex == index && isTtsPlaying
+                        ? Icons.stop
+                        : Icons.volume_up,
+                    tooltip: currentlySpeakingIndex == index && isTtsPlaying
+                        ? 'Stop'
+                        : 'Speak',
+                    onPressed: () async {
+                      if (currentlySpeakingIndex == index && isTtsPlaying) {
+                        await flutterTts.stop();
                         setState(() {
                           isTtsPlaying = false;
                           currentlySpeakingIndex = null;
                         });
-                      });
-                      flutterTts.setCancelHandler(() {
+                      } else {
+                        await flutterTts.stop();
                         setState(() {
-                          isTtsPlaying = false;
-                          currentlySpeakingIndex = null;
+                          currentlySpeakingIndex = index;
+                          isTtsPlaying = true;
                         });
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(width: 8),
-                _buildLargeIconButton(
-                  icon: Icons.refresh,
-                  tooltip: 'Regenerate',
-                  onPressed: () {
-                    _regenerateResponse(index);
-                  },
-                ),
-              ],
+                        await flutterTts.speak(message.text);
+                        flutterTts.setCompletionHandler(() {
+                          setState(() {
+                            isTtsPlaying = false;
+                            currentlySpeakingIndex = null;
+                          });
+                        });
+                        flutterTts.setCancelHandler(() {
+                          setState(() {
+                            isTtsPlaying = false;
+                            currentlySpeakingIndex = null;
+                          });
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildLargeIconButton(
+                    icon: Icons.refresh,
+                    tooltip: 'Regenerate',
+                    onPressed: () {
+                      _regenerateResponse(index);
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -1024,365 +1030,26 @@ class _ChatBotScreenState extends State<ChatBotScreen>
 
 // ... (Previous code remains unchanged)
 
-Widget _buildSideNavigation() {
-  return Drawer(
-    backgroundColor: const Color(0xFFFAFAFA),
-    width: MediaQuery.of(context).size.width * 0.90,
-    child: SafeArea(
-      child: Column(
-        children: [
-          // Header with logo and title
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                bottom: BorderSide(
-                  color: Colors.grey.withOpacity(0.1),
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3E5F5),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Image.asset(
-                    'assets/logo2.png',
-                    height: 32,
-                    width: 32,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.chat_bubble_outline,
-                      size: 24,
-                      color: Color(0xFF6A1B9A),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Shakti',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF36013F),
-                        ),
-                      ),
-                      Text(
-                        'AI Safety Assistant',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.grey),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-          ),
+// The rest of the ChatBotScreenState class remains unchanged up to _buildSideNavigation()
 
-          // New Chat Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text(
-                  'New Chat',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: const Color(0xFF6A1B9A),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: const BorderSide(color: Color(0xFF6A1B9A)),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  elevation: 0,
-                ),
-                onPressed: () {
-                  _startNewChat();
-                  Navigator.pop(context);
-                },
-              ),
-            ),
-          ),
-
-          // Chat history list
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.history,
-                            color: Color(0xFF6A1B9A), size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Recent Chats',
-                          style: TextStyle(
-                            color: Theme.of(context).primaryColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '${previousChats.length} chats',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Chat list
-                  Expanded(
-                    child: previousChats.isEmpty
-                        ? _buildEmptyHistoryState()
-                        : ListView.builder(
-                            physics: const BouncingScrollPhysics(),
-                            padding: const EdgeInsets.only(top: 8),
-                            itemCount: previousChats.length,
-                            itemBuilder: (context, idx) {
-                              final chat = previousChats[idx];
-                              final title = chat.isNotEmpty
-                                  ? (chat.first.isUser
-                                      ? chat.first.text
-                                      : 'Chat')
-                                  : 'Chat';
-                              final time = chat.isNotEmpty
-                                  ? _formatTime(chat.first.timestamp)
-                                  : '';
-                              return _buildConversationItem(title, time, idx);
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Quick Resources Section - Adjusted to move downward and reduce gap
-          Container(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8), // Reduced bottom padding to minimize gap
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Quick Resources',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF36013F),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Row(
-                    children: [
-                      _buildResourceBox('Safety Tips', Icons.security),
-                      _buildResourceBox('Emergency Help', Icons.warning),
-                      _buildResourceBox('Legal Support', Icons.gavel),
-                      _buildResourceBox('Support Groups', Icons.group),
-                      _buildResourceBox('Self Defense', Icons.shield),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 0), // Added to push content downward
-          // User profile section
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.05),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: ListTile(
-              leading: const CircleAvatar(
-                radius: 20,
-                backgroundColor: Color(0xFFF3E5F5),
-                child: Icon(Icons.person, color: Color(0xFF6A1B9A)),
-              ),
-              title: const Text(
-                'Samay Powade',
-                style: TextStyle(
-                  color: Color(0xFF36013F),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: const Text(
-                'Safety First',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                ),
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.settings, color: Color(0xFF6A1B9A)),
-                onPressed: () {},
-              ),
-              contentPadding: EdgeInsets.zero,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-Widget _buildResourceBox(String label, IconData icon) {
-  return GestureDetector(
-    onTap: () {
-      _sendMessage(label);
-      Navigator.pop(context);
-    },
-    child: Container(
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3E5F5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF6A1B9A), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 24, color: const Color(0xFF6A1B9A)),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF6A1B9A),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-// ... (Rest of the code remains unchanged)
-  String _formatTime(DateTime dt) {
-    final now = DateTime.now();
-    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
-      return "Today, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
-    } else {
-      return "${dt.day}/${dt.month}/${dt.year}";
-    }
-  }
-
-  Widget _buildConversationItem(String title, String time, int idx) {
-    return Dismissible(
-      key: Key('chat_$idx'),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Align(
-          alignment: Alignment.centerRight,
-          child: Padding(
-            padding: EdgeInsets.only(right: 20),
-            child: Icon(Icons.delete, color: Colors.red),
-          ),
-        ),
-      ),
-      confirmDismiss: (direction) async {
-        return await showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text('Delete Chat'),
-              content: const Text('Are you sure you want to delete this chat?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Delete'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-      onDismissed: (direction) {
-        _deleteChat(idx);
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: () async {
-              setState(() {
-                messages = List<ChatMessage>.from(previousChats[idx]);
-              });
-              await _saveCurrentChat();
-              Navigator.pop(context);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+  Widget _buildSideNavigation() {
+    return Drawer(
+      backgroundColor: const Color(0xFFFAFAFA),
+      width: MediaQuery.of(context).size.width * 0.90,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header with logo and title
+            Container(
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.grey.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
               ),
               child: Row(
                 children: [
@@ -1390,43 +1057,284 @@ Widget _buildResourceBox(String label, IconData icon) {
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF3E5F5),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
-                      Icons.chat_bubble_outline,
-                      color: Color(0xFF6A1B9A),
-                      size: 20,
+                    child: Image.asset(
+                      'assets/logo2.png',
+                      height: 32,
+                      width: 32,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.chat_bubble_outline,
+                        size: 24,
+                        color: Color(0xFF6A1B9A),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          title.length > 30
-                              ? '${title.substring(0, 30)}...'
-                              : title,
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                          'Shakti',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF36013F),
                           ),
                         ),
-                        const SizedBox(height: 4),
                         Text(
-                          time,
+                          'AI Safety Assistant',
                           style: TextStyle(
-                            color: Colors.grey[600],
                             fontSize: 12,
+                            color: Colors.grey,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: Colors.grey),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ],
               ),
+            ),
+
+            // New Chat Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text(
+                    'New Chat',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: const Color(0xFF6A1B9A),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: Color(0xFF6A1B9A)),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    _startNewChat();
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+            ),
+
+            // Chat history list
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.history,
+                              color: Color(0xFF6A1B9A), size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Recent Chats',
+                            style: TextStyle(
+                              color: Theme.of(context).primaryColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${previousChats.length} chats',
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Chat list
+                    Expanded(
+                      child: previousChats.isEmpty
+                          ? _buildEmptyHistoryState()
+                          : ListView.builder(
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.only(top: 8),
+                              itemCount: previousChats.length,
+                              itemBuilder: (context, idx) {
+                                final chat = previousChats[idx];
+                                final title = chat.isNotEmpty
+                                    ? (chat.first.isUser
+                                        ? chat.first.text
+                                        : 'Chat')
+                                    : 'Chat';
+                                final time = chat.isNotEmpty
+                                    ? _formatTime(chat.first.timestamp)
+                                    : '';
+                                return _buildConversationItem(title, time, idx);
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Quick Resources Section - Adjusted to move downward and reduce gap
+            Container(
+              padding: const EdgeInsets.fromLTRB(
+                  24, 24, 24, 8), // Reduced bottom padding to minimize gap
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Quick Resources',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF36013F),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: [
+                        _buildResourceBox('Safety Tips', Icons.security),
+                        _buildResourceBox('Emergency Help', Icons.warning),
+                        _buildResourceBox('Legal Support', Icons.gavel),
+                        _buildResourceBox('Support Groups', Icons.group),
+                        _buildResourceBox('Self Defense', Icons.shield),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 0), // Added to push content downward
+            // User profile section
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.05),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Color(0xFFF3E5F5),
+                  child: Icon(Icons.person, color: Color(0xFF6A1B9A)),
+                ),
+                title: const Text(
+                  'Samay Powade',
+                  style: TextStyle(
+                    color: Color(0xFF36013F),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Safety First',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.settings, color: Color(0xFF6A1B9A)),
+                  onPressed: () {},
+                ),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConversationItem(String title, String time, int idx) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () async {
+            setState(() {
+              messages = List<ChatMessage>.from(previousChats[idx]);
+            });
+            await _saveCurrentChat();
+            Navigator.pop(context);
+          },
+          onLongPress: () => _showDeleteChatDialog(idx),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3E5F5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.chat_bubble_outline,
+                    color: Color(0xFF6A1B9A),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title.length > 30
+                            ? '${title.substring(0, 30)}...'
+                            : title,
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        time,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -1434,42 +1342,7 @@ Widget _buildResourceBox(String label, IconData icon) {
     );
   }
 
-  Widget _buildEmptyHistoryState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.history,
-            size: 64,
-            color: Colors.grey[300],
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'No chat history',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40),
-            child: Text(
-              'Start a conversation with Shakti to see your chat history here',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
+// This is the new _showDeleteChatDialog function
   void _showDeleteChatDialog(int idx) {
     showDialog(
       context: context,
@@ -1509,6 +1382,250 @@ Widget _buildResourceBox(String label, IconData icon) {
       },
     );
   }
+
+// This is the updated _deleteChat function
+  void _deleteChat(int idx) {
+    try {
+      setState(() {
+        if (isSearching) {
+          if (idx >= 0 && idx < filteredChats.length) {
+            final chatToDelete = filteredChats[idx];
+            final originalIndex = previousChats.indexOf(chatToDelete);
+            if (originalIndex != -1) {
+              previousChats.removeAt(originalIndex);
+            }
+            filteredChats.removeAt(idx);
+          }
+        } else {
+          if (idx >= 0 && idx < previousChats.length) {
+            previousChats.removeAt(idx);
+          }
+        }
+      });
+      if (isSearching) {
+        final query = _searchController.text.toLowerCase().trim();
+        if (query.isEmpty) {
+          filteredChats = List.from(previousChats);
+        } else {
+          filteredChats = previousChats.where((chat) {
+            return chat
+                .any((message) => message.text.toLowerCase().contains(query));
+          }).toList();
+        }
+      }
+      _saveAllChats();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chat deleted successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Error deleting chat: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error deleting chat. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildResourceBox(String label, IconData icon) {
+    return GestureDetector(
+      onTap: () {
+        _sendMessage(label);
+        Navigator.pop(context);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3E5F5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF6A1B9A), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 24, color: const Color(0xFF6A1B9A)),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF6A1B9A),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime dt) {
+    final now = DateTime.now();
+    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
+      return "Today, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+    } else {
+      return "${dt.day}/${dt.month}/${dt.year}";
+    }
+  }
+
+  // Widget _buildConversationItem(String title, String time, int idx) {
+  //   return Container(
+  //     margin: const EdgeInsets.only(bottom: 8),
+  //     child: Material(
+  //       color: Colors.transparent,
+  //       child: InkWell(
+  //         borderRadius: BorderRadius.circular(8),
+  //         onTap: () async {
+  //           setState(() {
+  //             messages = List<ChatMessage>.from(previousChats[idx]);
+  //           });
+  //           await _saveCurrentChat();
+  //           Navigator.pop(context);
+  //         },
+  //         onLongPress: () => _showDeleteChatDialog(idx),
+  //         child: Container(
+  //           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+  //           decoration: BoxDecoration(
+  //             borderRadius: BorderRadius.circular(8),
+  //           ),
+  //           child: Row(
+  //             children: [
+  //               Container(
+  //                 padding: const EdgeInsets.all(8),
+  //                 decoration: BoxDecoration(
+  //                   color: const Color(0xFFF3E5F5),
+  //                   borderRadius: BorderRadius.circular(8),
+  //                 ),
+  //                 child: const Icon(
+  //                   Icons.chat_bubble_outline,
+  //                   color: Color(0xFF6A1B9A),
+  //                   size: 20,
+  //                 ),
+  //               ),
+  //               const SizedBox(width: 12),
+  //               Expanded(
+  //                 child: Column(
+  //                   crossAxisAlignment: CrossAxisAlignment.start,
+  //                   children: [
+  //                     Text(
+  //                       title.length > 30
+  //                           ? '${title.substring(0, 30)}...'
+  //                           : title,
+  //                       style: const TextStyle(
+  //                         color: Colors.black87,
+  //                         fontSize: 14,
+  //                         fontWeight: FontWeight.w500,
+  //                       ),
+  //                     ),
+  //                     const SizedBox(height: 4),
+  //                     Text(
+  //                       time,
+  //                       style: TextStyle(
+  //                         color: Colors.grey[600],
+  //                         fontSize: 12,
+  //                       ),
+  //                     ),
+  //                   ],
+  //                 ),
+  //               ),
+  //               const Icon(Icons.chevron_right, color: Colors.grey),
+  //             ],
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  Widget _buildEmptyHistoryState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.history,
+            size: 64,
+            color: Colors.grey[300],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No chat history',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              'Start a conversation with Shakti to see your chat history here',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // void _showDeleteChatDialog(int idx) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(16),
+  //         ),
+  //         title: const Row(
+  //           children: [
+  //             Icon(Icons.delete_outline, color: Colors.red),
+  //             SizedBox(width: 8),
+  //             Text('Delete Chat'),
+  //           ],
+  //         ),
+  //         content: const Text(
+  //           'Are you sure you want to delete this chat? This action cannot be undone.',
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.of(context).pop(),
+  //             child: const Text('Cancel'),
+  //           ),
+  //           ElevatedButton(
+  //             style: ElevatedButton.styleFrom(
+  //               backgroundColor: Colors.red,
+  //               foregroundColor: Colors.white,
+  //             ),
+  //             onPressed: () {
+  //               Navigator.of(context).pop();
+  //               _deleteChat(idx);
+  //             },
+  //             child: const Text('Delete'),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   void _showClearAllDialog() {
     showDialog(
@@ -1550,56 +1667,57 @@ Widget _buildResourceBox(String label, IconData icon) {
     );
   }
 
-  void _deleteChat(int idx) {
-    try {
-      setState(() {
-        if (isSearching) {
-          // Check if index is valid for filtered chats
-          if (idx >= 0 && idx < filteredChats.length) {
-            final chatToDelete = filteredChats[idx];
-            final originalIndex = previousChats.indexOf(chatToDelete);
-            if (originalIndex != -1) {
-              previousChats.removeAt(originalIndex);
-            }
-            filteredChats.removeAt(idx);
-          }
-        } else {
-          // Check if index is valid for previous chats
-          if (idx >= 0 && idx < previousChats.length) {
-            previousChats.removeAt(idx);
-          }
-        }
-      });
-      
-      // Update filtered chats to match previous chats
-      if (isSearching) {
-        final query = _searchController.text.toLowerCase().trim();
-        if (query.isEmpty) {
-          filteredChats = List.from(previousChats);
-        } else {
-          filteredChats = previousChats.where((chat) {
-            return chat.any((message) => message.text.toLowerCase().contains(query));
-          }).toList();
-        }
-      }
-      
-      _saveAllChats();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Chat deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      print('Error deleting chat: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error deleting chat. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
+  // void _deleteChat(int idx) {
+  //   try {
+  //     setState(() {
+  //       if (isSearching) {
+  //         // Check if index is valid for filtered chats
+  //         if (idx >= 0 && idx < filteredChats.length) {
+  //           final chatToDelete = filteredChats[idx];
+  //           final originalIndex = previousChats.indexOf(chatToDelete);
+  //           if (originalIndex != -1) {
+  //             previousChats.removeAt(originalIndex);
+  //           }
+  //           filteredChats.removeAt(idx);
+  //         }
+  //       } else {
+  //         // Check if index is valid for previous chats
+  //         if (idx >= 0 && idx < previousChats.length) {
+  //           previousChats.removeAt(idx);
+  //         }
+  //       }
+  //     });
+
+  //     // Update filtered chats to match previous chats
+  //     if (isSearching) {
+  //       final query = _searchController.text.toLowerCase().trim();
+  //       if (query.isEmpty) {
+  //         filteredChats = List.from(previousChats);
+  //       } else {
+  //         filteredChats = previousChats.where((chat) {
+  //           return chat
+  //               .any((message) => message.text.toLowerCase().contains(query));
+  //         }).toList();
+  //       }
+  //     }
+
+  //     _saveAllChats();
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //         content: Text('Chat deleted successfully'),
+  //         backgroundColor: Colors.green,
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     print('Error deleting chat: $e');
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //         content: Text('Error deleting chat. Please try again.'),
+  //         backgroundColor: Colors.red,
+  //       ),
+  //     );
+  //   }
+  // }
 
   void _clearAllChats() {
     try {
