@@ -8,9 +8,9 @@ import 'dart:convert';
 import 'dart:async'; // Import for TimeoutException and Timer
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // Import the markdown package
+// ... existing imports
 
 void main() {
-  // Set system UI overlay style for a consistent look
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.white,
     statusBarIconBrightness: Brightness.dark,
@@ -29,12 +29,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Shakti AI Chat Bot',
       theme: ThemeData(
-        primaryColor:
-            const Color(0xFF36013F), // Deep purple for a professional feel
+        primaryColor: const Color(0xFF36013F),
         scaffoldBackgroundColor: Colors.white,
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.white,
-          elevation: 0, // Flat design
+          elevation: 0,
           iconTheme: IconThemeData(color: Color(0xFF36013F)),
         ),
         textTheme: const TextTheme(
@@ -43,7 +42,6 @@ class MyApp extends StatelessWidget {
         ),
         colorScheme: ColorScheme.fromSwatch()
             .copyWith(secondary: const Color(0xFFFF1493)),
-        // FIX: Set the default font for the entire app to support Hindi/Marathi characters
         fontFamily: 'NotoSansDevanagari',
       ),
       home: const ChatBotScreen(),
@@ -75,6 +73,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
+  // New animation controller for the sliding effect
+  late AnimationController _drawerAnimationController;
+  late Animation<double> _drawerSlideAnimation;
+
   FlutterTts flutterTts = FlutterTts();
   int? currentlySpeakingIndex;
   bool isTtsPlaying = false;
@@ -96,6 +98,22 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
     _fadeController.forward();
+
+    // Initialize the new animation controller
+    _drawerAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+
+    // This will animate the body's horizontal position
+    _drawerSlideAnimation = Tween<double>(
+      begin: 0.0,
+      end: 0.8, // The factor of the screen width to slide
+    ).animate(CurvedAnimation(
+      parent: _drawerAnimationController,
+      curve: Curves.easeInOut,
+    ));
+
     _loadAllChats();
     _searchController.addListener(_onSearchChanged);
   }
@@ -104,6 +122,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   void dispose() {
     flutterTts.stop();
     _fadeController.dispose();
+    _drawerAnimationController.dispose();
     _messageController.dispose();
     _scrollController.dispose();
     _searchController.dispose();
@@ -112,16 +131,11 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   }
 
   void _onSearchChanged() {
-    // Cancel previous timer
     _searchDebounceTimer?.cancel();
-
-    // Debounce search to prevent excessive rebuilds
     _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
       final query = _searchController.text.toLowerCase().trim();
       final wasSearching = isSearching;
       final newIsSearching = query.isNotEmpty;
-
-      // Only update state if there's an actual change
       if (wasSearching != newIsSearching ||
           (newIsSearching &&
               (filteredChats.isEmpty ||
@@ -165,8 +179,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           ? (chat.first.isUser ? chat.first.text : 'Chat')
           : 'Chat';
     }
-
-    // Find the first message that contains the search query
     for (ChatMessage message in chat) {
       if (message.text.toLowerCase().contains(query.toLowerCase())) {
         String text = message.text;
@@ -176,7 +188,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         return text;
       }
     }
-
     return chat.isNotEmpty
         ? (chat.first.isUser ? chat.first.text : 'Chat')
         : 'Chat';
@@ -184,7 +195,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
 
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
-
     setState(() {
       messages.add(ChatMessage(text: text, isUser: true));
       isTyping = true;
@@ -193,9 +203,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     _messageController.clear();
     _scrollToBottom();
     await _saveCurrentChat();
-
     final startTime = DateTime.now();
-
     try {
       final response = await http
           .post(
@@ -204,7 +212,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             body: jsonEncode({'message': text}),
           )
           .timeout(const Duration(seconds: 20));
-
       final elapsed = DateTime.now().difference(startTime);
       const minTypingDuration = Duration(milliseconds: 800);
       if (elapsed < minTypingDuration) {
@@ -215,7 +222,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         return;
       }
       if (response.statusCode == 200) {
-        // FIX: Properly decode UTF-8 response
         final responseBody = utf8.decode(response.bodyBytes);
         final data = jsonDecode(responseBody);
         setState(() {
@@ -240,7 +246,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         setState(() => isTyping = false);
         return;
       }
-
       String errorMessage;
       if (e is TimeoutException) {
         errorMessage =
@@ -249,7 +254,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         errorMessage =
             "Connection Failed.\n\n- Is the Python server running on your computer?\n- Is a firewall blocking the connection to port 5000?";
       }
-
       setState(() {
         messages.add(ChatMessage(
           text: errorMessage,
@@ -268,22 +272,14 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       userMsgIndex--;
     }
     if (userMsgIndex < 0) return;
-
-    // Remove the old bot response
     setState(() {
       messages.removeAt(botMsgIndex);
     });
-
-    // Show typing indicator
     setState(() {
       isTyping = true;
       _stopRequested = false;
     });
-
-    // Get the user's original message
     final userMsg = messages[userMsgIndex].text;
-
-    // Send request to get new response
     try {
       final response = await http
           .post(
@@ -292,12 +288,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             body: jsonEncode({'message': userMsg}),
           )
           .timeout(const Duration(seconds: 20));
-
       if (_stopRequested) {
         setState(() => isTyping = false);
         return;
       }
-
       if (response.statusCode == 200) {
         final responseBody = utf8.decode(response.bodyBytes);
         final data = jsonDecode(responseBody);
@@ -323,7 +317,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         setState(() => isTyping = false);
         return;
       }
-
       String errorMessage;
       if (e is TimeoutException) {
         errorMessage =
@@ -332,7 +325,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         errorMessage =
             "Connection Failed.\n\n- Is the Python server running on your computer?\n- Is a firewall blocking the connection?";
       }
-
       setState(() {
         messages.add(ChatMessage(
           text: errorMessage,
@@ -341,7 +333,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         isTyping = false;
       });
     }
-
     _scrollToBottom();
     await _saveCurrentChat();
   }
@@ -381,7 +372,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             .map<List<ChatMessage>>((chat) =>
                 (chat as List).map((e) => ChatMessage.fromJson(e)).toList())
             .toList();
-        filteredChats = List.from(previousChats); // Initialize filtered chats
+        filteredChats = List.from(previousChats);
       });
     }
     await _loadCurrentChat();
@@ -424,7 +415,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             color: Colors.black, fontSize: 19, fontWeight: FontWeight.w600),
         leading: IconButton(
           icon: const Icon(Icons.menu),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          onPressed: () {
+            // Open the drawer and start the slide animation
+            _scaffoldKey.currentState?.openDrawer();
+          },
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -449,27 +443,86 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           ),
         ],
       ),
-      drawer: _buildSideNavigation(),
+      drawer: Drawer(
+        backgroundColor: const Color(0xFFFAFAFA),
+        width: MediaQuery.of(context).size.width * 0.90,
+        child: _buildSideNavigation(),
+      ),
       drawerEdgeDragWidth: MediaQuery.of(context).size.width,
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Column(
-          children: [
-            Expanded(
-              child: Container(
-                color: Colors.white,
-                child: messages.isEmpty
-                    ? _buildEmptyState()
-                    : _buildMessagesList(),
+      onDrawerChanged: (isOpened) {
+        if (isOpened) {
+          _drawerAnimationController.forward();
+        } else {
+          _drawerAnimationController.reverse();
+        }
+      },
+      body: AnimatedBuilder(
+        animation: _drawerAnimationController,
+        builder: (context, child) {
+          final double slide =
+              MediaQuery.of(context).size.width * _drawerSlideAnimation.value;
+          final double scale = 1.0 -
+              (_drawerSlideAnimation.value * 0.2); // Optional scaling effect
+          final double borderRadius = _drawerAnimationController.value * 24;
+
+          return Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..translate(slide)
+              ..scale(scale),
+            child: GestureDetector(
+              onTap: () {
+                if (_scaffoldKey.currentState!.isDrawerOpen) {
+                  Navigator.pop(context);
+                }
+              },
+              onHorizontalDragUpdate: (details) {
+                if (!_scaffoldKey.currentState!.isDrawerOpen) {
+                  _drawerAnimationController.value += details.primaryDelta! /
+                      (MediaQuery.of(context).size.width * 0.90);
+                }
+              },
+              onHorizontalDragEnd: (details) {
+                if (_drawerAnimationController.value > 0.5) {
+                  _scaffoldKey.currentState!.openDrawer();
+                } else {
+                  _drawerAnimationController.reverse();
+                }
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(borderRadius),
+                child: AbsorbPointer(
+                  absorbing: _scaffoldKey.currentState!.isDrawerOpen,
+                  child: Stack(
+                    children: [
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                color: Colors.white,
+                                child: messages.isEmpty
+                                    ? _buildEmptyState()
+                                    : _buildMessagesList(),
+                              ),
+                            ),
+                            _buildMessageInput(),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            _buildMessageInput(),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
+  // ... rest of the code remains unchanged
   Widget _buildEmptyState() {
     return Center(
       child: SingleChildScrollView(
@@ -548,80 +601,74 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     );
   }
 
-// WIDGET FULLY REVISED TO FIX FONT ISSUES
   Widget _buildMessageBubble(ChatMessage message) {
     int index = messages.indexOf(message);
     bool isBot = !message.isUser;
-
-    // FIX: Define a comprehensive and consistent stylesheet for markdown with balanced fonts.
     final markdownStyleSheet =
         MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
       p: const TextStyle(
         color: Colors.black87,
-        fontSize: 16, // Decreased font size for better readability
+        fontSize: 16,
         height: 1.5,
-        fontFamily: 'NotoSansDevanagari', // Ensure font is applied
+        fontFamily: 'NotoSansDevanagari',
       ),
       strong: const TextStyle(
         color: Color(0xFF36013F),
         fontWeight: FontWeight.bold,
-        fontSize: 16.5, // Decreased font size
-        fontFamily: 'NotoSansDevanagari', // Ensure font is applied
+        fontSize: 16.5,
+        fontFamily: 'NotoSansDevanagari',
       ),
       h1: const TextStyle(
         color: Color(0xFF36013F),
         fontWeight: FontWeight.bold,
-        fontSize: 20, // Decreased font size
-        fontFamily: 'NotoSansDevanagari', // Ensure font is applied
+        fontSize: 20,
+        fontFamily: 'NotoSansDevanagari',
       ),
       h2: const TextStyle(
         color: Color(0xFF6A1B9A),
         fontWeight: FontWeight.bold,
-        fontSize: 18, // Decreased font size
-        fontFamily: 'NotoSansDevanagari', // Ensure font is applied
+        fontSize: 18,
+        fontFamily: 'NotoSansDevanagari',
       ),
       h3: const TextStyle(
         color: Color(0xFF8E24AA),
         fontWeight: FontWeight.bold,
-        fontSize: 17, // Decreased font size
-        fontFamily: 'NotoSansDevanagari', // Ensure font is applied
+        fontSize: 17,
+        fontFamily: 'NotoSansDevanagari',
       ),
       listBullet: const TextStyle(
         color: Color(0xFF36013F),
-        fontSize: 16, // Decreased font size
+        fontSize: 16,
         height: 1.5,
-        fontFamily: 'NotoSansDevanagari', // Ensure font is applied
+        fontFamily: 'NotoSansDevanagari',
       ),
       blockquote: const TextStyle(
         color: Colors.black54,
         fontStyle: FontStyle.italic,
-        fontSize: 15, // Decreased font size
-        fontFamily: 'NotoSansDevanagari', // Ensure font is applied
+        fontSize: 15,
+        fontFamily: 'NotoSansDevanagari',
       ),
       code: const TextStyle(
         backgroundColor: Color(0xFFF3E5F5),
         color: Color(0xFF6A1B9A),
         fontFamily: 'monospace',
-        fontSize: 14, // Decreased font size
+        fontSize: 14,
       ),
       tableHead: const TextStyle(
         fontWeight: FontWeight.bold,
         color: Color(0xFF36013F),
-        fontSize: 16, // Decreased font size
-        fontFamily: 'NotoSansDevanagari', // Ensure font is applied
+        fontSize: 16,
+        fontFamily: 'NotoSansDevanagari',
       ),
       blockSpacing: 12,
       listIndent: 20,
     );
-
-    // Detect legal or emergency message
     bool isLegal = isBot && message.text.toLowerCase().contains("legal help");
     bool isEmergency = isBot &&
         (message.text.toLowerCase().contains("emergency") ||
             message.text
                 .toLowerCase()
                 .contains("your safety is my #1 priority"));
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
@@ -665,7 +712,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                                     Expanded(
                                       child: MarkdownBody(
                                         data: message.text,
-                                        // FIX: Apply a derived stylesheet for special cards with balanced fonts
                                         styleSheet: markdownStyleSheet.copyWith(
                                           p: const TextStyle(
                                               color: Colors.black87,
@@ -686,7 +732,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                                       horizontal: 16, vertical: 14),
                                   child: MarkdownBody(
                                     data: message.text,
-                                    // FIX: Apply a derived stylesheet for special cards with balanced fonts
                                     styleSheet: markdownStyleSheet.copyWith(
                                       p: const TextStyle(
                                           color: Colors.black87,
@@ -714,15 +759,13 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                         child: isBot
                             ? MarkdownBody(
                                 data: message.text,
-                                // FIX: Apply the consistent stylesheet here
                                 styleSheet: markdownStyleSheet,
                               )
                             : Text(
                                 message.text,
                                 style: const TextStyle(
                                   color: Colors.black87,
-                                  fontSize: 16, // Decreased to 16
-                                  // No need for fontFamily here, it inherits from theme
+                                  fontSize: 16,
                                 ),
                               ),
                       ),
@@ -918,20 +961,17 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 ),
                 child: TextField(
                   controller: _messageController,
-                  style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 14), // Increased from 13 to 14 - balanced size
+                  style: const TextStyle(color: Colors.black87, fontSize: 14),
                   decoration: const InputDecoration(
                     contentPadding: EdgeInsets.symmetric(vertical: 12),
                     hintText: 'Type a message...',
                     hintStyle: TextStyle(
                         color: Color(0xFF8E24AA),
-                        fontSize: 14, // Increased from 13 to 14 - balanced size
+                        fontSize: 14,
                         fontWeight: FontWeight.w400),
                     border: InputBorder.none,
                   ),
                   onChanged: (text) {
-                    // Only rebuild if the input state actually changes
                     final newIsInputNotEmpty = text.trim().isNotEmpty;
                     if (newIsInputNotEmpty != isInputNotEmpty) {
                       setState(() {});
@@ -1023,14 +1063,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   }
 
   void _onMicPressed() {}
-
   void _onVoiceAssistantPressed() {}
-
-// ... (Previous code remains unchanged)
-
-// ... (Previous code remains unchanged)
-
-// The rest of the ChatBotScreenState class remains unchanged up to _buildSideNavigation()
 
   Widget _buildSideNavigation() {
     return Drawer(
@@ -1039,7 +1072,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       child: SafeArea(
         child: Column(
           children: [
-            // Header with logo and title
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -1101,8 +1133,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 ],
               ),
             ),
-
-            // New Chat Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: SizedBox(
@@ -1130,14 +1160,11 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 ),
               ),
             ),
-
-            // Chat history list
             Expanded(
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    // Header
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
@@ -1164,8 +1191,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                         ],
                       ),
                     ),
-
-                    // Chat list
                     Expanded(
                       child: previousChats.isEmpty
                           ? _buildEmptyHistoryState()
@@ -1191,11 +1216,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 ),
               ),
             ),
-
-            // Quick Resources Section - Adjusted to move downward and reduce gap
             Container(
-              padding: const EdgeInsets.fromLTRB(
-                  24, 24, 24, 8), // Reduced bottom padding to minimize gap
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1224,8 +1246,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 ],
               ),
             ),
-            const SizedBox(height: 0), // Added to push content downward
-            // User profile section
+            const SizedBox(height: 0),
             Container(
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(12),
@@ -1342,7 +1363,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     );
   }
 
-// This is the new _showDeleteChatDialog function
   void _showDeleteChatDialog(int idx) {
     showDialog(
       context: context,
@@ -1383,7 +1403,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     );
   }
 
-// This is the updated _deleteChat function
   void _deleteChat(int idx) {
     try {
       setState(() {
@@ -1482,75 +1501,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     }
   }
 
-  // Widget _buildConversationItem(String title, String time, int idx) {
-  //   return Container(
-  //     margin: const EdgeInsets.only(bottom: 8),
-  //     child: Material(
-  //       color: Colors.transparent,
-  //       child: InkWell(
-  //         borderRadius: BorderRadius.circular(8),
-  //         onTap: () async {
-  //           setState(() {
-  //             messages = List<ChatMessage>.from(previousChats[idx]);
-  //           });
-  //           await _saveCurrentChat();
-  //           Navigator.pop(context);
-  //         },
-  //         onLongPress: () => _showDeleteChatDialog(idx),
-  //         child: Container(
-  //           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-  //           decoration: BoxDecoration(
-  //             borderRadius: BorderRadius.circular(8),
-  //           ),
-  //           child: Row(
-  //             children: [
-  //               Container(
-  //                 padding: const EdgeInsets.all(8),
-  //                 decoration: BoxDecoration(
-  //                   color: const Color(0xFFF3E5F5),
-  //                   borderRadius: BorderRadius.circular(8),
-  //                 ),
-  //                 child: const Icon(
-  //                   Icons.chat_bubble_outline,
-  //                   color: Color(0xFF6A1B9A),
-  //                   size: 20,
-  //                 ),
-  //               ),
-  //               const SizedBox(width: 12),
-  //               Expanded(
-  //                 child: Column(
-  //                   crossAxisAlignment: CrossAxisAlignment.start,
-  //                   children: [
-  //                     Text(
-  //                       title.length > 30
-  //                           ? '${title.substring(0, 30)}...'
-  //                           : title,
-  //                       style: const TextStyle(
-  //                         color: Colors.black87,
-  //                         fontSize: 14,
-  //                         fontWeight: FontWeight.w500,
-  //                       ),
-  //                     ),
-  //                     const SizedBox(height: 4),
-  //                     Text(
-  //                       time,
-  //                       style: TextStyle(
-  //                         color: Colors.grey[600],
-  //                         fontSize: 12,
-  //                       ),
-  //                     ),
-  //                   ],
-  //                 ),
-  //               ),
-  //               const Icon(Icons.chevron_right, color: Colors.grey),
-  //             ],
-  //           ),
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
-
   Widget _buildEmptyHistoryState() {
     return Center(
       child: Column(
@@ -1586,46 +1536,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       ),
     );
   }
-
-  // void _showDeleteChatDialog(int idx) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (BuildContext context) {
-  //       return AlertDialog(
-  //         shape: RoundedRectangleBorder(
-  //           borderRadius: BorderRadius.circular(16),
-  //         ),
-  //         title: const Row(
-  //           children: [
-  //             Icon(Icons.delete_outline, color: Colors.red),
-  //             SizedBox(width: 8),
-  //             Text('Delete Chat'),
-  //           ],
-  //         ),
-  //         content: const Text(
-  //           'Are you sure you want to delete this chat? This action cannot be undone.',
-  //         ),
-  //         actions: [
-  //           TextButton(
-  //             onPressed: () => Navigator.of(context).pop(),
-  //             child: const Text('Cancel'),
-  //           ),
-  //           ElevatedButton(
-  //             style: ElevatedButton.styleFrom(
-  //               backgroundColor: Colors.red,
-  //               foregroundColor: Colors.white,
-  //             ),
-  //             onPressed: () {
-  //               Navigator.of(context).pop();
-  //               _deleteChat(idx);
-  //             },
-  //             child: const Text('Delete'),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
 
   void _showClearAllDialog() {
     showDialog(
@@ -1666,58 +1576,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
       },
     );
   }
-
-  // void _deleteChat(int idx) {
-  //   try {
-  //     setState(() {
-  //       if (isSearching) {
-  //         // Check if index is valid for filtered chats
-  //         if (idx >= 0 && idx < filteredChats.length) {
-  //           final chatToDelete = filteredChats[idx];
-  //           final originalIndex = previousChats.indexOf(chatToDelete);
-  //           if (originalIndex != -1) {
-  //             previousChats.removeAt(originalIndex);
-  //           }
-  //           filteredChats.removeAt(idx);
-  //         }
-  //       } else {
-  //         // Check if index is valid for previous chats
-  //         if (idx >= 0 && idx < previousChats.length) {
-  //           previousChats.removeAt(idx);
-  //         }
-  //       }
-  //     });
-
-  //     // Update filtered chats to match previous chats
-  //     if (isSearching) {
-  //       final query = _searchController.text.toLowerCase().trim();
-  //       if (query.isEmpty) {
-  //         filteredChats = List.from(previousChats);
-  //       } else {
-  //         filteredChats = previousChats.where((chat) {
-  //           return chat
-  //               .any((message) => message.text.toLowerCase().contains(query));
-  //         }).toList();
-  //       }
-  //     }
-
-  //     _saveAllChats();
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('Chat deleted successfully'),
-  //         backgroundColor: Colors.green,
-  //       ),
-  //     );
-  //   } catch (e) {
-  //     print('Error deleting chat: $e');
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('Error deleting chat. Please try again.'),
-  //         backgroundColor: Colors.red,
-  //       ),
-  //     );
-  //   }
-  // }
 
   void _clearAllChats() {
     try {
@@ -1818,7 +1676,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           style: const TextStyle(
             color: Color(0xFF36013F),
             fontWeight: FontWeight.w600,
-            fontSize: 12, // Increased from 11 to 12 - balanced size
+            fontSize: 12,
           ),
           maxLines: 1,
         ),
