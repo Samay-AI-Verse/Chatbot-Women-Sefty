@@ -11,6 +11,10 @@ import 'package:flutter_markdown/flutter_markdown.dart'; // Import the markdown 
 import 'package:image_picker/image_picker.dart'; // Import for image picking
 import 'package:file_picker/file_picker.dart'; // Import for file picking
 import 'package:http_parser/http_parser.dart'; // Add this line
+// main.dart
+import 'widgets/mic_style.dart'; // Add this line
+// import 'package:speech_to_text/speech_to_text.dart'; // Add this line
+import 'voice_assistant/voice_assistant_screen.dart';
 
 void main() {
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -400,7 +404,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     }
     setState(() {
       messages.clear();
-      _currentChatIndex = null; // Add this line
+      // _currentChatIndex = null; // Add this line
     });
     await _saveCurrentChat();
   }
@@ -1441,8 +1445,30 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     await _saveCurrentChat();
   }
 
-  void _onMicPressed() {}
-  void _onVoiceAssistantPressed() {}
+  // main.dart
+  void _onMicPressed() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return MicStylePopup(
+          onSpeechRecognized: (String text) {
+            if (text.isNotEmpty) {
+              _messageController.text = text;
+              _sendMessage(text);
+            }
+          },
+        );
+      },
+    );
+  }
+
+  void _onVoiceAssistantPressed() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AIAssistantScreen()),
+    );
+  }
 
   Widget _buildSideNavigation() {
     return Drawer(
@@ -1505,9 +1531,10 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey),
-                    onPressed: () => Navigator.pop(context),
+                  const CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Color(0xFFF3E5F5),
+                    child: Icon(Icons.person, color: Color(0xFF6A1B9A)),
                   ),
                 ],
               ),
@@ -1602,7 +1629,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
               ),
             ),
             Container(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              padding: const EdgeInsets.fromLTRB(24, 40, 24, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1631,49 +1658,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 ],
               ),
             ),
-            const SizedBox(height: 0),
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: ListTile(
-                leading: const CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Color(0xFFF3E5F5),
-                  child: Icon(Icons.person, color: Color(0xFF6A1B9A)),
-                ),
-                title: const Text(
-                  'Samay Powade',
-                  style: TextStyle(
-                    color: Color(0xFF36013F),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                subtitle: const Text(
-                  'Safety First',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.settings, color: Color(0xFF6A1B9A)),
-                  onPressed: () {},
-                ),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
+            const SizedBox(height: 10),
           ],
         ),
       ),
