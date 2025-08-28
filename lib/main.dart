@@ -4,11 +4,13 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
+import 'dart:io'; // Import for File
 import 'dart:async'; // Import for TimeoutException and Timer
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // Import the markdown package
-// ... existing imports
+import 'package:image_picker/image_picker.dart'; // Import for image picking
+import 'package:file_picker/file_picker.dart'; // Import for file picking
+import 'package:http_parser/http_parser.dart'; // Add this line
 
 void main() {
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -63,7 +65,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
-
+  int? _currentChatIndex;
   List<ChatMessage> messages = [];
   List<List<ChatMessage>> previousChats = [];
   List<List<ChatMessage>> filteredChats = [];
@@ -264,6 +266,16 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     }
     _scrollToBottom();
     await _saveCurrentChat();
+    // New logic to highlight the chat after the first message is sent
+    if (_currentChatIndex == null) {
+      setState(() {
+        if (previousChats.isEmpty ||
+            previousChats.last.first.text != messages.first.text) {
+          previousChats.add(List<ChatMessage>.from(messages));
+        }
+        _currentChatIndex = previousChats.length - 1;
+      });
+    }
   }
 
   Future<void> _regenerateResponse(int botMsgIndex) async {
@@ -299,6 +311,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           messages.add(ChatMessage(
             text: data['reply'] ?? 'No response from server.',
             isUser: false,
+            type: 'text',
           ));
           isTyping = false;
         });
@@ -308,6 +321,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             text:
                 'Server Error ${response.statusCode}: Could not get a valid response.',
             isUser: false,
+            type: 'text',
           ));
           isTyping = false;
         });
@@ -329,6 +343,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         messages.add(ChatMessage(
           text: errorMessage,
           isUser: false,
+          type: 'text',
         ));
         isTyping = false;
       });
@@ -385,6 +400,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
     }
     setState(() {
       messages.clear();
+      _currentChatIndex = null; // Add this line
     });
     await _saveCurrentChat();
   }
@@ -669,6 +685,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             message.text
                 .toLowerCase()
                 .contains("your safety is my #1 priority"));
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
@@ -756,18 +773,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                               : const Color(0xFFF5F5F5),
                           borderRadius: BorderRadius.circular(18),
                         ),
-                        child: isBot
-                            ? MarkdownBody(
-                                data: message.text,
-                                styleSheet: markdownStyleSheet,
-                              )
-                            : Text(
-                                message.text,
-                                style: const TextStyle(
-                                  color: Colors.black87,
-                                  fontSize: 16,
-                                ),
-                              ),
+                        child: _buildContent(
+                            message), // Call the new content builder
                       ),
               ),
             ],
@@ -836,6 +843,128 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         ],
       ),
     );
+  }
+
+  // New method to build content based on message type
+  Widget _buildContent(ChatMessage message) {
+    if (message.type == 'image' && message.filePath != null) {
+      return Container(
+        padding: const EdgeInsets.all(8.0),
+        decoration: BoxDecoration(
+          color: message.isUser
+              ? const Color(0xFFF3E5F5)
+              : const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Image.file(
+              File(message.filePath!),
+              width: 200, // Adjust size as needed
+              height: 200,
+              fit: BoxFit.cover,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message.text,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (message.type == 'file' && message.filePath != null) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.insert_drive_file, color: Color(0xFF36013F)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              message.text,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      );
+    } else {
+      // Existing MarkdownBody or Text widget for regular text messages
+      return !message.isUser
+          ? MarkdownBody(
+              data: message.text,
+              styleSheet:
+                  MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                p: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 16,
+                  height: 1.5,
+                  fontFamily: 'NotoSansDevanagari',
+                ),
+                strong: const TextStyle(
+                  color: Color(0xFF36013F),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16.5,
+                  fontFamily: 'NotoSansDevanagari',
+                ),
+                h1: const TextStyle(
+                  color: Color(0xFF36013F),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  fontFamily: 'NotoSansDevanagari',
+                ),
+                h2: const TextStyle(
+                  color: Color(0xFF6A1B9A),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  fontFamily: 'NotoSansDevanagari',
+                ),
+                h3: const TextStyle(
+                  color: Color(0xFF8E24AA),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                  fontFamily: 'NotoSansDevanagari',
+                ),
+                listBullet: const TextStyle(
+                  color: Color(0xFF36013F),
+                  fontSize: 16,
+                  height: 1.5,
+                  fontFamily: 'NotoSansDevanagari',
+                ),
+                blockquote: const TextStyle(
+                  color: Colors.black54,
+                  fontStyle: FontStyle.italic,
+                  fontSize: 15,
+                  fontFamily: 'NotoSansDevanagari',
+                ),
+                code: const TextStyle(
+                  backgroundColor: Color(0xFFF3E5F5),
+                  color: Color(0xFF6A1B9A),
+                  fontFamily: 'monospace',
+                  fontSize: 14,
+                ),
+                tableHead: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF36013F),
+                  fontSize: 16,
+                  fontFamily: 'NotoSansDevanagari',
+                ),
+                blockSpacing: 12,
+                listIndent: 20,
+              ),
+            )
+          : Text(
+              message.text,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 16,
+              ),
+            );
+    }
   }
 
   Widget _buildLargeIconButton(
@@ -1057,9 +1186,259 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   }
 
   void _onAddPressed() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Add feature coming soon!')),
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                // Draggable handle
+                Center(
+                  child: Container(
+                    height: 4,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildOptionTile(
+                  icon: Icons.image_outlined,
+                  label: 'Image',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _buildOptionTile(
+                  icon: Icons.insert_drive_file_outlined,
+                  label: 'File',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickFile();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  Widget _buildOptionTile({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3E5F5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                size: 24,
+                color: const Color(0xFF6A1B9A),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF36013F),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 100,
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3E5F5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE0E0E0)),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              size: 40,
+              color: const Color(0xFF6A1B9A),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF36013F),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      final fileBytes = await pickedFile.readAsBytes();
+      final chatMessage = ChatMessage(
+        text: "User uploaded an image.",
+        isUser: true,
+        type: 'image',
+        filePath: pickedFile.path,
+        data: fileBytes,
+      );
+      setState(() {
+        messages.add(chatMessage);
+      });
+      _scrollToBottom();
+      _sendMessageWithFile(chatMessage);
+    }
+  }
+
+  Future<void> _pickFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'doc', 'docx', 'txt'],
+    );
+    if (result != null) {
+      final fileBytes = await File(result.files.single.path!).readAsBytes();
+      final chatMessage = ChatMessage(
+        text: "User uploaded a file: ${result.files.single.name}",
+        isUser: true,
+        type: 'file',
+        filePath: result.files.single.path,
+        data: fileBytes,
+      );
+      setState(() {
+        messages.add(chatMessage);
+      });
+      _scrollToBottom();
+      _sendMessageWithFile(chatMessage);
+    }
+  }
+
+  Future<void> _sendMessageWithFile(ChatMessage message) async {
+    if (message.data == null) return;
+    setState(() {
+      isTyping = true;
+      _stopRequested = false;
+    });
+    _scrollToBottom();
+    await _saveCurrentChat();
+    final startTime = DateTime.now();
+
+    try {
+      final request = http.MultipartRequest('POST', Uri.parse(_serverUrl));
+      request.files.add(http.MultipartFile.fromBytes(
+        'file', // Field name for the file on your backend
+        message.data!,
+        filename: message.filePath!.split('/').last,
+        contentType: message.type == 'image'
+            ? MediaType('image', 'jpeg')
+            : MediaType('application', 'octet-stream'),
+      ));
+      request.fields['message'] = message.text; // Add the message text
+
+      final streamedResponse =
+          await request.send().timeout(const Duration(seconds: 40));
+      final response = await http.Response.fromStream(streamedResponse);
+
+      // ... rest of your response handling logic from _sendMessage
+      final elapsed = DateTime.now().difference(startTime);
+      const minTypingDuration = Duration(milliseconds: 800);
+      if (elapsed < minTypingDuration) {
+        await Future.delayed(minTypingDuration - elapsed);
+      }
+      if (_stopRequested) {
+        setState(() => isTyping = false);
+        return;
+      }
+      if (response.statusCode == 200) {
+        final responseBody = utf8.decode(response.bodyBytes);
+        final data = jsonDecode(responseBody);
+        setState(() {
+          messages.add(ChatMessage(
+            text: data['reply'] ?? 'No response from server.',
+            isUser: false,
+            type: 'text',
+          ));
+          isTyping = false;
+        });
+      } else {
+        setState(() {
+          messages.add(ChatMessage(
+            text:
+                'Server Error ${response.statusCode}: Could not get a valid response. Please check the server logs.',
+            isUser: false,
+            type: 'text',
+          ));
+          isTyping = false;
+        });
+      }
+    } catch (e) {
+      // ... your existing error handling
+      if (_stopRequested) {
+        setState(() => isTyping = false);
+        return;
+      }
+      String errorMessage;
+      if (e is TimeoutException) {
+        errorMessage =
+            "Connection Timed Out. Is the Python server running and responsive?";
+      } else {
+        errorMessage =
+            "Connection Failed. Is the Python server running and accessible?";
+      }
+      setState(() {
+        messages.add(ChatMessage(
+          text: errorMessage,
+          isUser: false,
+          type: 'text',
+        ));
+        isTyping = false;
+      });
+    }
+    _scrollToBottom();
+    await _saveCurrentChat();
   }
 
   void _onMicPressed() {}
@@ -1135,28 +1514,34 @@ class _ChatBotScreenState extends State<ChatBotScreen>
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text(
-                    'New Chat',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+              child: InkWell(
+                onTap: () {
+                  _startNewChat();
+                  Navigator.pop(context);
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFEFF4),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: const Color(0xFF6A1B9A),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      side: const BorderSide(color: Color(0xFF6A1B9A)),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    elevation: 0,
+                  child: const Row(
+                    children: [
+                      Icon(Icons.edit_outlined,
+                          size: 20, color: Color(0xFF36013F)),
+                      SizedBox(width: 12),
+                      Text(
+                        'New chat',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF36013F),
+                        ),
+                      ),
+                    ],
                   ),
-                  onPressed: () {
-                    _startNewChat();
-                    Navigator.pop(context);
-                  },
                 ),
               ),
             ),
@@ -1296,8 +1681,13 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   }
 
   Widget _buildConversationItem(String title, String time, int idx) {
+    final isSelected = _currentChatIndex == idx;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFFF3E5F5) : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -1305,31 +1695,16 @@ class _ChatBotScreenState extends State<ChatBotScreen>
           onTap: () async {
             setState(() {
               messages = List<ChatMessage>.from(previousChats[idx]);
+              _currentChatIndex = idx; // Add this line
             });
             await _saveCurrentChat();
             Navigator.pop(context);
           },
           onLongPress: () => _showDeleteChatDialog(idx),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-            ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3E5F5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.chat_bubble_outline,
-                    color: Color(0xFF6A1B9A),
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1433,12 +1808,12 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         }
       }
       _saveAllChats();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Chat deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(
+      //     content: Text('Chat deleted successfully'),
+      //     backgroundColor: Colors.green,
+      //   ),
+      // );
     } catch (e) {
       print('Error deleting chat: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1566,8 +1941,8 @@ class _ChatBotScreenState extends State<ChatBotScreen>
                 foregroundColor: Colors.white,
               ),
               onPressed: () {
-                Navigator.of(context).pop();
-                _clearAllChats();
+                // Navigator.of(context).pop();
+                // _clearAllChats();
               },
               child: const Text('Clear All'),
             ),
@@ -1575,30 +1950,6 @@ class _ChatBotScreenState extends State<ChatBotScreen>
         );
       },
     );
-  }
-
-  void _clearAllChats() {
-    try {
-      setState(() {
-        previousChats.clear();
-        filteredChats.clear();
-      });
-      _saveAllChats();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('All chats cleared successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      print('Error clearing all chats: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error clearing chats. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   void _showDeleteMessageDialog(int index) {
@@ -1700,22 +2051,34 @@ class ChatMessage {
   final String text;
   final bool isUser;
   final DateTime timestamp;
+  final String? filePath;
+  final String? type;
+  final List<int>? data; // Add this line
 
   ChatMessage({
     required this.text,
     required this.isUser,
     DateTime? timestamp,
+    this.filePath,
+    this.type = 'text',
+    this.data, // Add this line
   }) : timestamp = timestamp ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
         'text': text,
         'isUser': isUser,
         'timestamp': timestamp.toIso8601String(),
+        'filePath': filePath,
+        'type': type,
+        'data': data, // Add this line
       };
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
         text: json['text'],
         isUser: json['isUser'],
         timestamp: DateTime.parse(json['timestamp']),
+        filePath: json['filePath'],
+        type: json['type'],
+        data: (json['data'] as List?)?.cast<int>(), // Add this line
       );
 }
