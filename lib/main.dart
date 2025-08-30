@@ -89,7 +89,7 @@ class _ChatBotScreenState extends State<ChatBotScreen>
   bool _stopRequested = false;
 
   final String _serverUrl =
-      'https://women-safety-backend-host.onrender.com/chat';
+      'https://samay-verse-womensafety-backend-chatbot.hf.space/chat';
 
   Timer? _searchDebounceTimer;
 
