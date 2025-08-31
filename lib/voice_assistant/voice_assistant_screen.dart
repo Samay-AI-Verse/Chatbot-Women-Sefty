@@ -33,7 +33,7 @@ class _AIAssistantScreenState extends State<AIAssistantScreen>
   late Animation<double> _breathingAnimation;
 
   final String _serverUrl =
-      'https://women-safety-backend-host.onrender.com/chat';
+      'https://samay-verse-womensafety-backend-chatbot.hf.space/chat';
 
   List<String> _sentencesToSpeak = [];
   int _currentSentenceIndex = 0;
